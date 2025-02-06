@@ -1,3 +1,5 @@
+//This is a local script that serves as a POC for retrieving google calendar events
+
 require('dotenv').config();
 const express = require('express');
 const { google } = require('googleapis');
