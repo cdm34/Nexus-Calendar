@@ -3,7 +3,6 @@
 require('dotenv').config();
 const express = require('express');
 const { google } = require('googleapis');
-const admin = require('firebase-admin');
 
 const app = express();
 
