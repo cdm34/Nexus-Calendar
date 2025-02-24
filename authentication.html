@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register & Login</title>
+</head>
+<body>
+    <h2>Register</h2>
+    <input type="text" id="regName" placeholder="Name">
+    <input type="email" id="regEmail" placeholder="Email">
+    <input type="password" id="regPassword" placeholder="Password">
+    <button onclick="registerUser()">Register</button>
+    <p id="regMessage"></p>
+
+    <h2>Login</h2>
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button onclick="loginUser()">Login</button>
+    <p id="loginMessage"></p>
+    
+    <script>
+        async function registerUser() {
+            const name = document.getElementById("regName").value;
+            const email = document.getElementById("regEmail").value;
+            const password = document.getElementById("regPassword").value;
+            const message = document.getElementById("regMessage");
+
+            const response = await fetch("http://localhost:3001/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, email, password })
+            });
+
+            const data = await response.json();
+            message.innerText = response.ok ? "Success: " + data.nexusUserId : "Error: " + (data.error || "Registration failed");
+        }
+
+        async function loginUser() {
+            const email = document.getElementById("loginEmail").value;
+            const password = document.getElementById("loginPassword").value;
+            const message = document.getElementById("loginMessage");
+
+            const response = await fetch("http://localhost:3001/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+            message.innerText = response.ok ? "Login successful" : "Error: " + (data.error || "Login failed");
+        }
+    </script>
+</body>
+</html>
