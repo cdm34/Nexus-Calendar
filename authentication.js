@@ -1,3 +1,5 @@
+// Go to localhost:3001/register after starting the script
+
 require('dotenv').config();
 const express = require('express');
 const admin = require('firebase-admin');
