@@ -1,0 +1,94 @@
+
+.customize-container {
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  width: 90%;
+  max-width: 800px;
+  margin: 100px auto 0;
+  padding: 20px;
+}
+
+.customize-section {
+  margin-bottom: 30px;
+}
+
+.customize-section h3 {
+  font-weight: 500;
+  margin-bottom: 15px;
+  color: f5f5f0;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+.color-options, .font-options, .view-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.color-option, .font-option, .view-option {
+  padding: 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.color-option {
+  color: white;
+  font-weight: 500;
+}
+
+.color-option[data-theme="0"] {
+  background-color: #f5f5f0;
+}
+
+.color-option[data-theme="1"] {
+  background-color: #e74c3c;
+}
+
+.color-option[data-theme="2"] {
+  background-color: #2ecc71;
+}
+
+.color-option[data-theme="3"] {
+  background-color: #9b59b6;
+}
+
+.color-option[data-theme="4"] {
+  background-color: #f39c12;
+}
+
+.color-option[data-theme="5"] {
+  background-color: #2c3e50;
+}
+
+.font-option, .view-option {
+  background-color: var(--secondary-color);
+  border: 2px solid transparent;
+}
+
+.font-option:hover, .view-option:hover {
+  border-color: var(--primary-color);
+}
+
+.color-option:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.font-option.selected, .view-option.selected, .color-option.selected {
+  border: 2px solid #2ecc71;
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.3);
+}
+
+.view-option.selected {
+  background-color: rgba(46, 204, 113, 0.1);
+}
+
+@media screen and (max-width: 768px) {
+  .color-options, .font-options, .view-options {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}
