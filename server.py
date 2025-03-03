@@ -21,46 +21,34 @@ def index():
     except Exception as e:
         return f"Template Error: {str(e)}"
 
-
-#print("Firestore initialized:", firebase_admin.get_app().name)
-
-
 @app.route('/data')
 def get_data():
     try:
-        # Navigate Firestore collections/documents
         events_ref = db.collection("users").document("57340ff4-6467-47f3-a2a3-cbc532e4119c") \
                        .collection("calendars").document("google").collection("events")
         
         docs = events_ref.stream()
-        data = {doc.id: doc.to_dict() for doc in docs}  # Convert documents to JSON-friendly format
+        
+        events = []
+        for doc in docs:
+            event_data = doc.to_dict()
+            formatted_event = {
+                "id": doc.id,
+                "title": event_data.get("title", "No Title"),
+                "start_time": event_data.get("start_time", "Unknown Start"),
+                "end_time": event_data.get("end_time", "Unknown End"),
+                "location": event_data.get("location", "No Location"),
+                "description": event_data.get("description", "No Description")
+            }
+            events.append(formatted_event)
 
-        #print("Fetched Data from Firestore:", data)  # Debugging print
-        
-        if not data:
-            return jsonify({"error": "No data found at the specified path"}), 404
-        
-        return jsonify(data)
+        if not events:
+            return jsonify({"error": "No events found"}), 404
+
+        return jsonify(events)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
-@app.route('/debug_firebase')
-def debug_firebase():
-    try:
-        users_ref = db.collection("users")
-        users_docs = users_ref.stream()
-        
-        data = {doc.id: doc.to_dict() for doc in users_docs}  # Fetch all users
-        
-        print("Full Firestore Dump:", data)  # Debugging print
-        
-        return jsonify(data if data else {"error": "Firestore appears empty"}), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True)
