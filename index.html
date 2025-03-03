@@ -3,21 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raspberry Pi Firebase</title>
+    <title>Event List</title>
     <script>
-        async function fetchData() {
-            try {
-                let response = await fetch("/data");
-                let data = await response.json();
-                document.getElementById("output").innerText = JSON.stringify(data, null, 2);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            }
-        }
+        document.addEventListener("DOMContentLoaded", function () {
+            fetch("/data")
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById("event-container");
+
+                    if (data.error) {
+                        container.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                        return;
+                    }
+
+                    let html = "<h2>Event List</h2><ul>";
+                    data.forEach(event => {
+                        html += `
+                            <li>
+                                <strong>${event.title}</strong><br>
+                                <em>${event.start_time} - ${event.end_time}</em><br>
+                                Location: ${event.location}<br>
+                                Description: ${event.description}<br><br>
+                            </li>
+                        `;
+                    });
+                    html += "</ul>";
+
+                    container.innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById("event-container").innerHTML = `<p style="color: red;">Error loading events</p>`;
+                    console.error("Error fetching event data:", error);
+                });
+        });
     </script>
 </head>
-<body onload="fetchData()">
-    <h1>Data from Firebase</h1>
-    <pre id="output">Loading...</pre>
+<body>
+    <h1>My Events</h1>
+    <div id="event-container">Loading events...</div>
 </body>
 </html>
