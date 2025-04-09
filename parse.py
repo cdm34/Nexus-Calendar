@@ -35,9 +35,9 @@ def detect_provider(calendar: Calendar) -> str:
     elif "google" in prodid:
         return "Google"
     elif prodid:
-        return f"Unknown ({prodid})"
+        return f"ICS ({prodid})"
     else:
-        return "Unknown"
+        return "ICS"
 
 
 def load_calendar(file_path, nexus_user_id):
