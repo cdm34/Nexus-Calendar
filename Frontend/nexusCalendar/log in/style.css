@@ -1,0 +1,527 @@
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300..700&family=Jost:ital,wght@0,100..900;1,100..900&display=swap');
+
+
+
+:root {
+  --primary-color: #6799b2;
+  --secondary-color: #f0f0f0;
+  --text-color: #333;
+  --body-bg: #f5f5f0;
+}
+
+body {
+  font-family: "Jost", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-stretch: normal;
+  background-color: var(--body-bg);
+  transition: background-color 0.3s ease;
+}
+
+header {
+
+
+  text-align: center;
+  margin-bottom: 30px;
+  width: 100%;
+}
+
+header h1 {
+  display: flex;
+  position: fixed;
+  margin-top: 0px;
+  top: 10px;
+  left: 15px;
+  right: 0;
+  height: 40px;
+  color: #101;
+  font-weight: 400;
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+
+header h2 {
+  position: fixed;
+  margin: 0 0 5px 0;
+  text-align: left;
+  width: 100%;
+  margin-top: -65px;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  font-weight: 500;
+  color: #100;
+  font-size: 3.2rem;
+  text-transform: lowercase;
+}
+
+.view-buttons {
+ 
+  position: fixed;
+  top: 55px;
+  right: 20px;
+  height: 40px;
+  display: flex;
+  gap: 0px;
+  z-index: 100;
+}
+
+.view-btn {
+  font-family: "Jost", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+
+  font-stretch: normal;
+  padding: 5px 8px;
+  color: black;
+  background-color: #f5f5f0;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-size: 14px;
+}
+
+.view-btn:hover {
+  opacity: 0.9;
+}
+
+.view-btn.active {
+  background-color: #DADADA;
+}
+
+.settings-container {
+  position: fixed;
+  top: 8px;
+  right: 20px;
+  height: 40px;
+  font-weight: 400;
+  margin-top: 0px;
+  z-index: 100;
+}
+
+.settings-btn {
+  background-color: transparent;
+  padding: 8px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.settings-btn:hover .settings-icon {
+  content: url('settingsWHT.png');
+}
+
+.night-mode .settings-btn:hover .settings-icon {
+  content: url('settingsBCK.png');
+}
+
+.night-mode h1, 
+.night-mode h2, 
+.night-mode .days div,
+.night-mode .hour-label,
+.night-mode .day-column h3,
+.night-mode .weekdays div {
+  color: white;
+}
+
+.control-panel {
+  font-family: "Jost", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-stretch: normal;
+
+  display: none;
+  position: absolute;
+  background-color: #f5f5f0;
+  min-width: 250px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  border-radius: 8px;
+  z-index: 100;
+  padding: 15px;
+  right: 0;
+}
+
+.control-panel.show {
+  display: block;
+}
+
+.control-group {
+  
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.control-group:last-child {
+  margin-bottom: 0;
+}
+
+.control-btn {
+  font-family: "Jost", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-stretch: normal;
+  padding: 8px 16px;
+  background-color: #f5f5f0;
+  color: black;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.1s;
+  font-size: 14px;
+}
+
+.control-btn:hover {
+  background-color: #DADADA;
+}
+
+.control-btn:active {
+  transform: scale(0.98);
+}
+
+.view-btn.active {
+  
+
+  background-color: #DADADA;
+}
+
+.calendar {
+  flex: 1;
+  display: grid;
+  grid-template-rows: auto 1fr; 
+  width: 100vw;
+  overflow: hidden;
+  margin: 0 auto;
+  margin-top: 90px;
+  height: calc(100vh - 90px);
+  background-color: transparent;
+  border: none;
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  color: var(--text-color);
+  font-family: "Jost", sans-serif;
+  font-weight: 450;
+  font-style: normal;
+  gap: 0px;
+  padding: 14px 0;
+  border-bottom: 1px solid #ddd;
+  background-color: transparent;
+}
+
+.weekdays div {
+  text-align: center;
+  padding-right: 15px;
+  border-right: 1px solid #ddd;
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0px;
+  padding: 0px;
+  background-color: transparent;
+  
+}
+
+.days div {
+  display: grid;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  background-color: transparent;
+  position: relative;
+  border-right: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
+}
+
+.days div.other-month {
+  color: #ccc;
+  background-color: transparent;
+}
+
+.days div.today {
+  color: white;
+  font-weight: bold;
+}
+
+.days div.today::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 25px;
+  height: 25px;
+  background-color: var(--primary-color);
+  border-radius: 50%;
+  z-index: -1;
+}
+
+.days div:hover {
+  background-color: rgba(0,0,0,0.03);
+}
+
+/* Day view styles */
+.day-view {
+  width: 100%;
+  height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  overflow-y: auto;
+}
+
+.day-view h3 {
+  text-align: center;
+  margin-bottom: 15px;
+  color: var(--text-color, #333);
+  font-size: 1.5rem;
+}
+
+.hour-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  height: calc(100% - 50px);
+  overflow-y: auto;
+}
+
+.hour-slot {
+  display: flex;
+  height: 60px;
+  border-bottom: 1px solid #eee;
+  min-height: 60px;
+}
+
+.hour-slot.compact {
+  height: 50px;
+  min-height: 50px;
+}
+
+.hour-label {
+  width: 80px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.event-space {
+  background-color: var(--secondary-color, #f0f0f0);
+  border-radius: 5px;
+  cursor: pointer;
+  margin-right: 5px;
+}
+
+.event-space:hover {
+  background-color: #e6e6e6;
+}
+
+/* Three day view styles */
+.three-day-view {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.three-days-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.day-column {
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.day-column h3 {
+  text-align: center;
+  font-size: 16px;
+  margin-bottom: 10px;
+  color: var(--text-color, #333);
+}
+
+/* Notes tab styles */
+.notes-tab {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  background-color: var(--primary-color);
+  color: white;
+  padding: 15px 10px;
+  border-radius: 10px 0 0 10px;
+  cursor: pointer;
+  box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  z-index: 200;
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+  transform-origin: right center;
+}
+
+.notes-tab:hover {
+  padding-right: 15px;
+}
+
+.notes-panel {
+  position: fixed;
+  top: 0;
+  right: -400px;
+  width: 380px;
+  height: 100vh;
+  background-color: white;
+  box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+  z-index: 200;
+  transition: right 0.3s ease;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.notes-panel.open {
+  right: 0;
+}
+
+.notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.notes-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.close-notes {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-color);
+}
+
+.notes-content {
+  margin-bottom: 20px;
+}
+
+.notes-attribution {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 8px;
+  background-color: var(--secondary-color);
+  border-radius: 5px;
+}
+
+.notes-info {
+  font-size: 0.9rem;
+  color: var(--text-color);
+}
+
+.notes-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.delete-note {
+  background: none;
+  border: none;
+  color: #e74c3c;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 3px 8px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.delete-note:hover {
+  background-color: #f9e7e7;
+}
+
+.notes-attribution {
+  display: none;
+}
+
+.notes-textarea {
+  width: 100%;
+  height: 200px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 15px;
+}
+
+.save-notes {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.save-notes:hover {
+  opacity: 0.9;
+}
+
+@media screen and (max-width: 768px) {
+  .days div {
+    height: 45px;
+    font-size: 0.9rem;
+  }
+
+  .weekdays {
+    font-size: 0.9rem;
+  }
+
+  .three-days-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .hour-label {
+    width: 60px;
+    font-size: 12px;
+  }
+
+  .control-panel {
+    min-width: 200px;
+    right: -50px;
+  }
+  
+  .notes-panel {
+    width: 100%;
+    right: -100%;
+  }
+  
+  .day-view, .three-day-view {
+    padding: 10px;
+  }
+}
