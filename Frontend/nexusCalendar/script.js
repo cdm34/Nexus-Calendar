@@ -45,22 +45,26 @@ const monthNames = [
   "July", "August", "September", "October", "November", "December"
 ];
 
-// Initialize calendar
-init();
+// Check login status
+if (!localStorage.getItem('nexusCalendar_user')) {
+  window.location.href = '/log%20in/login.html';
+} else {
+  init();
+}
 
 function init() {
   // Apply saved theme
-  
+
   // Update night mode button text based on current theme
   if (colorThemeBtn) {
     colorThemeBtn.textContent = currentTheme === 5 ? 'Light Mode' : 'Night Mode';
   }
-  
+
   // Apply saved font
   if (currentFont > 0) {
     document.body.style.fontFamily = fontFamilies[currentFont];
   }
-  
+
   // Update month header
   updateMonthDisplay();
 
@@ -87,7 +91,7 @@ function init() {
           break;
   }
 
-  
+
 }
 
 // Function to apply theme
@@ -97,12 +101,12 @@ function applyTheme(themeIndex) {
   document.documentElement.style.setProperty('--secondary-color', theme.secondary);
   document.documentElement.style.setProperty('--text-color', theme.text);
   document.body.style.backgroundColor = theme.bodyBg;
-  
+
   // Update weekdays background
   if (weekdaysEl) {
     weekdaysEl.style.backgroundColor = theme.primary;
   }
-  
+
   // Handle night mode specific changes
   const settingsIcon = document.querySelector('.settings-icon');
   if (settingsIcon) {
@@ -128,9 +132,39 @@ function openCustomizePage() {
   window.location.href = 'customize.html';
 }
 
+// Month Navigation
+const prevMonthBtn = document.getElementById('prev-month');
+const nextMonthBtn = document.getElementById('next-month');
+
+function navigateMonth(direction) {
+  if (direction === 'prev') {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+  } else {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+  }
+  updateMonthDisplay();
+  renderMonthView();
+}
+
 // Event Listeners
 if (settingsBtn) {
   settingsBtn.addEventListener('click', toggleSettings);
+}
+
+if (prevMonthBtn) {
+  prevMonthBtn.addEventListener('click', () => navigateMonth('prev'));
+}
+
+if (nextMonthBtn) {
+  nextMonthBtn.addEventListener('click', () => navigateMonth('next'));
 }
 
 if (colorThemeBtn) {
@@ -167,6 +201,97 @@ document.addEventListener('click', function(event) {
   }
 });
 
+// Notes functionality
+const notesTab = document.getElementById('notes-tab');
+const notesPanel = document.getElementById('notes-panel');
+const closeNotes = document.getElementById('close-notes');
+const notesTextarea = document.getElementById('notes-textarea');
+const saveNotesBtn = document.getElementById('save-notes');
+const notesAttribution = document.getElementById('notes-attribution');
+const notesInfo = document.querySelector('.notes-info');
+const deleteNoteUser = document.getElementById('delete-note-user');
+const deleteNoteEveryone = document.getElementById('delete-note-everyone');
+
+// Load saved notes and metadata from localStorage
+if (notesTextarea) {
+  const savedNotes = localStorage.getItem('nexusCalendar_notes') || '';
+  const noteMetadata = JSON.parse(localStorage.getItem('nexusCalendar_noteMetadata') || '{}');
+
+  notesTextarea.value = savedNotes;
+
+  // Display attribution if notes exist
+  if (savedNotes.trim() !== '' && noteMetadata.user) {
+    notesAttribution.style.display = 'flex';
+    notesInfo.textContent = `Note by: ${noteMetadata.user} • ${noteMetadata.time}`;
+  }
+}
+
+// Open notes panel
+if (notesTab) {
+  notesTab.addEventListener('click', () => {
+    notesPanel.classList.add('open');
+  });
+}
+
+// Close notes panel
+if (closeNotes) {
+  closeNotes.addEventListener('click', () => {
+    notesPanel.classList.remove('open');
+  });
+}
+
+// Save notes to localStorage with metadata
+if (saveNotesBtn) {
+  saveNotesBtn.addEventListener('click', () => {
+    const noteText = notesTextarea.value;
+    localStorage.setItem('nexusCalendar_notes', noteText);
+
+    // Only create metadata if there's text
+    if (noteText.trim() !== '') {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + 
+                        ' on ' + now.toLocaleDateString();
+
+      const metadata = {
+        user: 'User', // This would be replaced with the actual username in the future
+        time: timeString,
+        timestamp: now.getTime()
+      };
+
+      localStorage.setItem('nexusCalendar_noteMetadata', JSON.stringify(metadata));
+
+      // Display attribution
+      notesAttribution.style.display = 'flex';
+      notesInfo.textContent = `Note by: ${metadata.user} • ${metadata.time}`;
+    }
+
+    alert('Notes saved!');
+  });
+}
+
+// Delete note handlers
+if (deleteNoteUser) {
+  deleteNoteUser.addEventListener('click', () => {
+    if (confirm('Delete this note for you?')) {
+      localStorage.removeItem('nexusCalendar_notes');
+      localStorage.removeItem('nexusCalendar_noteMetadata');
+      notesTextarea.value = '';
+      notesAttribution.style.display = 'none';
+    }
+  });
+}
+
+if (deleteNoteEveryone) {
+  deleteNoteEveryone.addEventListener('click', () => {
+    if (confirm('Delete this note for everyone?')) {
+      localStorage.removeItem('nexusCalendar_notes');
+      localStorage.removeItem('nexusCalendar_noteMetadata');
+      notesTextarea.value = '';
+      notesAttribution.style.display = 'none';
+    }
+  });
+}
+
 // Function to change the color theme
 function changeColorTheme() {
   currentTheme = (currentTheme + 1) % colorThemes.length;
@@ -195,7 +320,7 @@ function changeFontFamily() {
 // Function to change the view
 function changeView(view) {
   currentView = view;
-  
+
   // Save to localStorage
   localStorage.setItem('nexusCalendar_view', view);
 
@@ -205,14 +330,14 @@ function changeView(view) {
     'day': viewDayBtn,
     'three-day': viewThreeDayBtn
   };
-  
+
   if (viewBtns[view]) {
     setActiveViewButton(viewBtns[view]);
   }
-  
+
   // Update the header based on the new view
   updateMonthDisplay();
-  
+
   // Render the selected view
   switch(view) {
     case 'month':
@@ -256,16 +381,17 @@ function renderMonthView() {
   // Show weekdays for month view
   weekdaysEl.style.display = 'grid';
   daysEl.innerHTML = '';
-  
+  daysEl.style.gridTemplateColumns = 'repeat(7, 1fr)'; // Reset to 7 columns
+
   // Get days in current month
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  
+
   // Get first day of month (0 = Sunday, 1 = Monday, etc.)
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-  
+
   // Get days from previous month
   const prevMonthDays = new Date(currentYear, currentMonth, 0).getDate();
-  
+
   // Add days from previous month
   for (let i = 0; i < firstDay; i++) {
     const dayNum = prevMonthDays - firstDay + i + 1;
@@ -274,29 +400,32 @@ function renderMonthView() {
     dayDiv.classList.add('other-month');
     daysEl.appendChild(dayDiv);
   }
-  
+
   // Add days of current month
   for (let i = 1; i <= daysInMonth; i++) {
     const dayDiv = document.createElement('div');
     dayDiv.textContent = i;
-    
+
     // Highlight today
     if (i === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()) {
       dayDiv.classList.add('today');
     }
-    
-    dayDiv.addEventListener('click', () => {
-      currentDay = i;
-      changeView('day');
+
+    dayDiv.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (e.target === dayDiv) {
+        const date = new Date(currentYear, currentMonth, i);
+        showEventMaker(date.toISOString());
+      }
     });
-    
+
     daysEl.appendChild(dayDiv);
   }
-  
+
   // Calculate how many days from next month to add
   const totalCells = 42; // 6 rows × 7 days
   const nextMonthDays = totalCells - daysInMonth - firstDay;
-  
+
   // Add days from next month
   for (let i = 1; i <= nextMonthDays; i++) {
     const dayDiv = document.createElement('div');
@@ -304,15 +433,18 @@ function renderMonthView() {
     dayDiv.classList.add('other-month');
     daysEl.appendChild(dayDiv);
   }
+
+  renderEvents();
 }
 
 // Render day view
 function renderDayView(day) {
   if (!daysEl) return;
-  
+
   weekdaysEl.style.display = 'none';
   daysEl.innerHTML = '';
-  
+  daysEl.style.gridTemplateColumns = '1fr'; // Full width
+
   const dayDiv = document.createElement('div');
   dayDiv.classList.add('day-view');
   dayDiv.innerHTML = `
@@ -327,21 +459,37 @@ function renderDayView(day) {
 // Render three-day view
 function renderThreeDayView(startDay) {
   if (!daysEl) return;
-  
+
   weekdaysEl.style.display = 'none';
   daysEl.innerHTML = '';
+  daysEl.style.gridTemplateColumns = '1fr'; // Full width for the container
 
   // Get days in current month
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  
+
   // Calculate the three days (current and next two)
   let currentDayToShow = startDay;
   let nextDay = startDay + 1;
   let thirdDay = startDay + 2;
 
   // Handle month boundaries
-  if (nextDay > daysInMonth) nextDay = 1;
-  if (thirdDay > daysInMonth) thirdDay = thirdDay - daysInMonth;
+  if (nextDay > daysInMonth) {
+    nextDay = 1;
+    // If crossing to next month
+    if (currentMonth === 11) {
+      // December to January
+      nextDay = 1;
+    }
+  }
+
+  if (thirdDay > daysInMonth) {
+    thirdDay = thirdDay - daysInMonth;
+    // If crossing to next month
+    if (currentMonth === 11) {
+      // December to January
+      thirdDay = thirdDay - daysInMonth;
+    }
+  }
 
   const threeDayDiv = document.createElement('div');
   threeDayDiv.classList.add('three-day-view');
@@ -368,6 +516,141 @@ function renderThreeDayView(startDay) {
 }
 
 // Generate hour slots for day views
+// Event handling
+const eventMaker = document.getElementById('event-maker');
+const eventForm = document.getElementById('event-form');
+const cancelEventBtn = document.getElementById('cancel-event');
+let selectedDate = null;
+
+function showEventMaker(date) {
+  selectedDate = date;
+  eventMaker.style.display = 'block';
+  const dateObj = new Date(date);
+  document.getElementById('event-date').value = dateObj.toISOString().split('T')[0];
+  document.getElementById('event-start').value = '09:00';
+  document.getElementById('event-end').value = '10:00';
+}
+
+function hideEventMaker() {
+  eventMaker.style.display = 'none';
+  eventForm.reset();
+  selectedDate = null;
+}
+
+function createEvent(event) {
+  event.preventDefault();
+  const title = document.getElementById('event-title').value;
+  const date = document.getElementById('event-date').value;
+  const start = document.getElementById('event-start').value;
+  const end = document.getElementById('event-end').value;
+  const color = document.getElementById('event-color').value;
+  const creator = localStorage.getItem('nexusCalendar_user') || 'Anonymous';
+
+  const eventData = {
+    title,
+    start,
+    end,
+    color,
+    date,
+    creator,
+    createdAt: new Date().toISOString(),
+    isEditable: true
+  };
+
+  const eventDateObj = new Date(eventData.date);
+  const eventYear = eventDateObj.getFullYear();
+  const eventMonth = eventDateObj.getMonth();
+
+  // Store event in month-specific storage
+  const storageKey = `nexusCalendar_events_${eventYear}_${eventMonth}`;
+  const events = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  events.push(eventData);
+  localStorage.setItem(storageKey, JSON.stringify(events));
+
+  hideEventMaker();
+  renderEvents();
+}
+
+function renderEvents() {
+  // Get events from current, previous and next month
+  const currentEvents = JSON.parse(localStorage.getItem(`nexusCalendar_events_${currentYear}_${currentMonth}`) || '[]');
+  const prevEvents = currentMonth === 0 
+    ? JSON.parse(localStorage.getItem(`nexusCalendar_events_${currentYear-1}_11`) || '[]')
+    : JSON.parse(localStorage.getItem(`nexusCalendar_events_${currentYear}_${currentMonth-1}`) || '[]');
+  const nextEvents = currentMonth === 11
+    ? JSON.parse(localStorage.getItem(`nexusCalendar_events_${currentYear+1}_0`) || '[]')
+    : JSON.parse(localStorage.getItem(`nexusCalendar_events_${currentYear}_${currentMonth+1}`) || '[]');
+  
+  const events = [...currentEvents, ...prevEvents, ...nextEvents];
+  const dayDivs = document.querySelectorAll('.days div');
+
+  document.querySelectorAll('.event-marker').forEach(marker => marker.remove());
+
+  dayDivs.forEach(div => {
+    if (div.classList.contains('other-month')) return;
+    const currentDate = new Date(currentYear, currentMonth, parseInt(div.textContent));
+    const dayEvents = events.filter(event => {
+      const evtDate = new Date(event.date + 'T00:00:00'); // Force local midnight
+      return evtDate.toLocaleDateString() === currentDate.toLocaleDateString();
+    });
+
+
+    if (dayEvents.length > 0) {
+      dayEvents.forEach(event => {
+        const marker = document.createElement('div');
+        marker.className = 'event-marker';
+        marker.style.backgroundColor = event.color;
+        marker.textContent = `${event.title} (${event.start})`;
+        marker.setAttribute('data-details', 
+          `Created by: ${event.creator}\nTime: ${event.start}-${event.end}\nDetails: ${event.title}`);
+        if(event.isEditable) {
+          marker.onclick = (e) => {
+            e.stopPropagation();
+            eventMaker.style.display = 'block';
+            document.getElementById('event-title').value = event.title;
+            document.getElementById('event-date').value = event.date;
+            document.getElementById('event-start').value = event.start;
+            document.getElementById('event-end').value = event.end;
+            document.getElementById('event-color').value = event.color;
+            
+            const eventActions = document.querySelector('.event-actions');
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'delete-event';
+            deleteBtn.textContent = 'Delete';
+            
+            // Remove any existing delete button
+            const existingDelete = eventActions.querySelector('.delete-event');
+            if (existingDelete) {
+              existingDelete.remove();
+            }
+            
+            eventActions.insertBefore(deleteBtn, eventActions.firstChild);
+            
+            deleteBtn.onclick = () => {
+              const storageKey = `nexusCalendar_events_${currentYear}_${currentMonth}`;
+              const events = JSON.parse(localStorage.getItem(storageKey) || '[]');
+              const updatedEvents = events.filter(evt => evt.createdAt !== event.createdAt);
+
+              localStorage.setItem(storageKey, JSON.stringify(updatedEvents));
+              hideEventMaker();
+              renderEvents();
+            };
+          };
+        }
+        div.appendChild(marker);
+      });
+
+      div.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (e.target === div) {
+          showEventMaker(currentDate.toISOString());
+        }
+      });
+    }
+  });
+}
+
 function generateHourSlots(isCompact = false) {
   let slots = '';
   for (let i = 8; i <= 20; i++) {
@@ -380,3 +663,7 @@ function generateHourSlots(isCompact = false) {
   }
   return slots;
 }
+
+// Event listeners
+cancelEventBtn.addEventListener('click', hideEventMaker);
+eventForm.addEventListener('submit', createEvent);
