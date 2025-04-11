@@ -8,11 +8,13 @@
 <body>
   <header>
     <h1> nexus calendar</h1>
-    <h2>March</h2>
+    <h2>april 2025</h2>
     <div class="view-buttons">
+      <button id="prev-month" class="nav-btn">&lt;</button>
       <button id="view-month" class="view-btn active" data-view="month">month</button>
       <button id="view-day" class="view-btn" data-view="day">1 day</button>
       <button id="view-three-day" class="view-btn" data-view="three-day">3 day</button>
+      <button id="next-month" class="nav-btn">&gt;</button>
     </div>
     <div class="settings-container">
       <button id="settings-btn" class="settings-btn"><img src="settingsBCK.png" alt="Settings" class="settings-icon"></button>
@@ -20,6 +22,7 @@
         <div class="control-group">
           <button id="color-theme" class="control-btn">Night Mode</button>
           <button id="font-change" class="control-btn">Customization Page</button>
+          <button id="group-settings" class="control-btn">Group Settings</button>
         </div>
       </div>
     </div>
@@ -67,8 +70,47 @@
       <div> 29</div>
       <div> 30</div>
       <div> 31</div>
+    </div>
   </div>
-    
+
+  <!-- Notes Tab and Panel -->
+  <div class="notes-tab" id="notes-tab">Notes</div>
+  <div class="notes-panel" id="notes-panel">
+    <div class="notes-header">
+      <h3>Notes</h3>
+      <button class="close-notes" id="close-notes">&times;</button>
+    </div>
+    <div class="notes-content">
+      <div class="notes-attribution" id="notes-attribution">
+        <div class="notes-info"></div>
+        <div class="notes-actions">
+          <button class="delete-note user" id="delete-note-user">Delete for Me</button>
+          <button class="delete-note everyone" id="delete-note-everyone">Delete for Everyone</button>
+        </div>
+      </div>
+      <textarea class="notes-textarea" id="notes-textarea" placeholder="Write your notes here..."></textarea>
+      <button class="save-notes" id="save-notes">Save Notes</button>
+    </div>
+  </div>
+
+  <!-- Event Maker Modal -->
+  <div id="event-maker" class="event-maker" style="display: none;">
+    <h3>Create Event</h3>
+    <form class="event-form" id="event-form">
+      <input type="text" id="event-title" placeholder="Event Title" required>
+      <input type="date" id="event-date" required>
+      <input type="time" id="event-start" required>
+      <input type="time" id="event-end" required>
+      <div class="event-color">
+        <label>Color:</label>
+        <input type="color" id="event-color" class="color-picker" value="#6799b2">
+      </div>
+      <div class="event-actions">
+        <button type="button" class="cancel-event" id="cancel-event">Cancel</button>
+        <button type="submit" class="save-event">Save</button>
+      </div>
+    </form>
+  </div>
   <script src="script.js"></script>
 </body>
 </html>
