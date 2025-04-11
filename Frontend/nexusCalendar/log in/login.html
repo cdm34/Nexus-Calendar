@@ -1,0 +1,58 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nexus Calendar - Login</title>
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .login-form input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .login-form button {
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .login-form button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>nexus calendar</h1>
+        <h2>login</h2>
+    </header>
+
+    <div class="login-container">
+        <div class="login-form">
+            <input type="text" placeholder="Username" id="username">
+            <input type="password" placeholder="Password" id="password">
+            <button onclick="window.location.href='../index.html'">Log In</button>
+        </div>
+    </div>
+    <script>
+        localStorage.setItem('nexusCalendar_user', true);
+    </script>
+</body>
+</html>
