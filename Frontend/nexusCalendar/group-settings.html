@@ -1,0 +1,168 @@
+<html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Group Settings</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Jost', sans-serif;
+    }
+
+    #back-btn {
+      background-color: var(--primary-color, #6799b2);
+      color: var(--text-color, #fff);
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    #back-btn:hover {
+      opacity: 0.9;
+    }
+
+    section {
+      margin-bottom: 30px;
+    }
+
+    h1, h2 {
+      font-weight: 600;
+    }
+
+    input, select, textarea, button {
+      font-family: inherit;
+      margin-top: 5px;
+    }
+
+    #group-form, #group-details {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <button id="back-btn">← Back to Calendar</button>
+    <h1>Group Settings</h1>
+
+    <section>
+      <p><strong>User ID:</strong> <code id="user-id-display">Loading...</code></p>
+      <label>Joined Groups:
+        <select id="group-selector">
+          <option selected disabled>None</option>
+        </select>
+      </label><br>
+
+      </label>
+
+      <button id="create-group-toggle">Create New Group</button>
+      <div id="group-form">
+      </div>
+    </section>
+
+
+    <div id="group-details">
+      <section>
+        <h2>Group Info</h2>
+        <label>Group Name: <input type="text" id="group-name" placeholder="Enter group name" /></label><br><br>
+
+        <label>Group Color: <input type="color" id="group-color" value="#6799b2" /></label><br>
+      </section>
+
+      <section>
+        <h2>Members</h2>
+        <ul id="member-list"></ul>
+        <label>Invite By Email: <input type="email" placeholder="Email address" /> <button>Send Invite</button></label>
+        </label><br>
+
+        <label>Invite By User ID: <input type="email" placeholder="User ID" /> <button>Send Invite</button></label>
+      </section>
+
+      <section>
+        <h2>Notifications</h2>
+        <label><input type="checkbox" /> Enable reminders</label><br>
+        <label>Default reminder:
+          <select>
+            <option>5 mins before</option>
+            <option selected>15 mins before</option>
+            <option>30 mins before</option>
+          </select>
+        </label>
+      </section>
+
+      <section>
+        <h2>Calendar Preferences</h2>
+        <label>Default View:
+          <select>
+            <option>Day</option>
+            <option>Week</option>
+            <option selected>Month</option>
+          </select>
+        </label><br>
+        <label>Time Zone: <input type="text" placeholder="e.g., CST" /></label>
+      </section>
+    <button id="submit-group">Submit Group</button>
+
+
+    </div>
+  </div>
+
+  <script>
+    const userId = localStorage.getItem('nexusUserId');
+    document.getElementById('user-id-display').textContent = userId || 'Not logged in';
+
+    document.getElementById('back-btn').addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+
+    document.getElementById('create-group-toggle').addEventListener('click', () => {
+      const form = document.getElementById('group-form');
+      const details = document.getElementById('group-details');
+      const show = form.style.display === 'none';
+      form.style.display = show ? 'block' : 'none';
+      details.style.display = show ? 'block' : 'none';
+    });
+
+    document.getElementById('submit-group').addEventListener('click', async () => {
+      const groupName = document.getElementById('group-name').value;
+      const creatorId = localStorage.getItem('nexusUserId');
+      const inviteIdsRaw = document.getElementById('invite-ids').value;
+
+      if (!groupName || !creatorId) {
+        alert("Missing group name or user ID");
+        return;
+      }
+
+      const response = await fetch('http://localhost:3001/create-group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName, creatorId })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(`Group "${groupName}" created!`);
+        const groupId = data.groupId;
+        const inviteIds = inviteIdsRaw.split(',').map(id => id.trim()).filter(Boolean);
+
+        for (const receiverId of inviteIds) {
+          await fetch('http://localhost:3001/invite-to-group', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ groupId, senderId: creatorId, receiverId })
+          });
+        }
+
+        alert(`Invited ${inviteIds.length} user(s) to the group.`);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    });
+  </script>
+</body>
+</html>
