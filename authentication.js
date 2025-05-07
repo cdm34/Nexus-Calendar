@@ -1,27 +1,20 @@
-// Go to localhost:3001/register after starting the script
-
 require('dotenv').config();
 const express = require('express');
 const admin = require('firebase-admin');
 const { v4: uuidv4 } = require('uuid');
 
+
 admin.initializeApp({
-    credential: admin.credential.cert(require('./nexus-calendar-7922f-firebase-adminsdk-fbsvc-94deec6503.json'))
+    credential: admin.credential.cert(require('./firebase-keys.json'))
 });
 
 const db = admin.firestore();
 const app = express();
+const cors = require('cors');
+app.use(cors());
+
 app.use(express.json());
 
-const path = require('path');
-
-// Serve the HTML frontend
-app.get('/authentication', (req, res) => {
-    res.sendFile(path.join(__dirname, 'authentication.html'));
-});
-
-
-// User Registration
 app.post('/register', async (req, res) => {
     try {
         const { email, password, name } = req.body;
@@ -41,6 +34,7 @@ app.post('/register', async (req, res) => {
         });
 
         res.status(201).json({ message: "User registered successfully", nexusUserId });
+        res.sendFile(path.join(__dirname, 'sync_calendars.html'));
     } catch (error) {
         console.error("Error registering user:", error);
         res.status(500).json({ error: error.message });
@@ -92,6 +86,5 @@ app.post('/login', async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
-
 
 app.listen(3001, () => console.log('Authentication service running on port 3001'));
