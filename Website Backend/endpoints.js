@@ -2,14 +2,20 @@ require('dotenv').config();
 const express = require('express');
 const admin = require('firebase-admin');
 const { v4: uuidv4 } = require('uuid');
+const cors = require('cors'); // You also need this if it's missing
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+
+
+const app = express(); 
+app.use(cors());
+app.use(express.json());
+
 
 admin.initializeApp({
-    credential: admin.credential.cert(require('../nexus-calendar-7922f-firebase-adminsdk-fbsvc-94deec6503.json'))
+    credential: admin.credential.cert(require('./firebase-keys.json'))
 });
 
 const db = admin.firestore();
-const app = express();
-app.use(express.json());
 
 app.post('/register', async (req, res) => {
     try {
@@ -296,5 +302,81 @@ app.post('/decline-invite', async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+app.post('/events', async (req, res) => {
+    try {
+        const { userId, event } = req.body;
+
+        if (!userId || !event) {
+            return res.status(400).json({ error: "userId and event are required." });
+        }
+
+        const ref = db.collection("users")
+                      .doc(userId)
+                      .collection("calendars")
+                      .doc("google")
+                      .collection("events");
+
+        const docRef = await ref.add(event);
+
+        res.status(201).json({ message: "Event created", eventId: docRef.id });
+    } catch (error) {
+        console.error("Error saving event:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.delete('/events/:userId/:eventId', async (req, res) => {
+  const { userId, eventId } = req.params;
+
+  if (!userId || !eventId) {
+    return res.status(400).json({ error: 'Missing userId or eventId' });
+  }
+
+  try {
+    const eventRef = db
+      .collection('users')
+      .doc(userId)
+      .collection('calendars')
+      .doc('google')
+      .collection('events')
+      .doc(eventId);
+
+    await eventRef.delete();
+
+    res.status(200).json({ message: 'Event deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    res.status(500).json({ error: 'Failed to delete event' });
+  }
+});
+
+app.put('/events/:userId/:eventId', async (req, res) => {
+  const { userId, eventId } = req.params;
+  const updatedEvent = req.body;
+
+  if (!userId || !eventId || !updatedEvent) {
+    return res.status(400).json({ error: "Missing userId, eventId, or event data." });
+  }
+
+  try {
+    const eventRef = db
+      .collection("users")
+      .doc(userId)
+      .collection("calendars")
+      .doc("google")
+      .collection("events")
+      .doc(eventId);
+
+    await eventRef.set(updatedEvent, { merge: true });
+
+    res.status(200).json({ message: "Event updated successfully." });
+  } catch (error) {
+    console.error("Error updating event:", error);
+    res.status(500).json({ error: "Failed to update event." });
+  }
+});
+
+
 
 app.listen(3001, () => console.log('Authentication service running on port 3001'));
