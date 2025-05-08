@@ -343,6 +343,7 @@ app.delete('/events/:userId/:eventId', async (req, res) => {
       .doc(eventId);
 
     await eventRef.delete();
+console.log(`Deleted event ${eventId} for user ${userId}`); 
 
     res.status(200).json({ message: 'Event deleted successfully' });
   } catch (error) {
@@ -376,6 +377,38 @@ app.put('/events/:userId/:eventId', async (req, res) => {
     res.status(500).json({ error: "Failed to update event." });
   }
 });
+
+const router = express.Router();
+
+app.get('/redirect', async (req, res) => {
+  const code = req.query.code;
+
+  const body = {
+    code,
+    client_id: "secre-code-here-cantcommit ik ik gotta read it in but was testing",
+    client_secret: "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",
+    redirect_uri: "http://localhost:5500/redirect",
+    grant_type: "authorization_code"
+  };
+
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+
+    const data = await response.json();
+    console.log("Token response:", data);
+
+    // Save to Firestore if needed
+     res.redirect("http://localhost:5500/customization.html?linked=true");
+  } catch (err) {
+    console.error("Token exchange failed:", err);
+    res.status(500).send("OAuth failed");
+  }
+});
+
 
 
 
