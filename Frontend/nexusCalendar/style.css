@@ -20,6 +20,7 @@ body {
 
 header {
 
+  position: absolute;
 
   text-align: center;
   margin-bottom: 30px;
@@ -27,11 +28,11 @@ header {
 }
 
 header h1 {
-  display: flex;
+  display: sticky;
   position: fixed;
   margin-top: 0px;
   top: 10px;
-  left: 15px;
+  left: 0px;
   right: 0;
   height: 40px;
   color: #101;
@@ -41,11 +42,11 @@ header h1 {
 }
 
 header h2 {
-  position: fixed;
+  position: static;
   margin: 0 0 5px 0;
   text-align: left;
   width: 100%;
-  margin-top: -65px;
+  margin-top: -75px;
   margin-bottom: 0px;
   margin-left: 0px;
   font-weight: 500;
@@ -55,14 +56,17 @@ header h2 {
 }
 
 .view-buttons {
-  position: fixed;
-  top: 55px;
-  right: 20px;
-  height: 40px;
+  position: static;
+
+  background-color: transparent;
+  border: none;
+  margin-top: -45px;
+  margin-right: 80px;
+
+  cursor: pointer;
   display: flex;
-  gap: 5px;
-  z-index: 100;
   align-items: center;
+  justify-content: right;
 }
 
 .nav-btn {
@@ -145,6 +149,14 @@ header h2 {
 .night-mode .day-column h3,
 .night-mode .weekdays div {
   color: white;
+}
+.day-header {
+  display: flex;
+  text-align: center;
+  font-size: 16px;
+  margin-bottom: 10px;
+  color: var(--text-color);
+  font-weight: 400;
 }
 
 .control-panel {
@@ -237,6 +249,7 @@ header h2 {
 
 .weekdays div {
   text-align: center;
+
   padding-right: 15px;
   border-right: 1px solid #ddd;
 }
@@ -251,7 +264,7 @@ header h2 {
 }
 
 .days div {
-  display: grid;
+  display: block;
   align-items: flex-start;
   justify-content: flex-end;
   padding: 8px;
@@ -262,13 +275,13 @@ header h2 {
   border-right: 1px solid #ddd;
   border-bottom: 1px solid #ddd;
 }
-
 .days div.other-month {
   color: #ccc;
   background-color: transparent;
 }
 
 .days div.today {
+
   color: white;
   font-weight: bold;
 }
@@ -276,10 +289,10 @@ header h2 {
 .days div.today::after {
   content: '';
   position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 25px;
-  height: 25px;
+  top: 8px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
   background-color: var(--primary-color);
   border-radius: 50%;
   z-index: -1;
@@ -357,57 +370,97 @@ header h2 {
 }
 
 .event-marker {
-  position: relative;
-  width: 100%;
-  padding: 2px 4px;
-  margin-top: 2px;
+  margin-top: 4px;
+  padding: 2px 6px;
   font-size: 11px;
   color: white;
-  text-overflow: ellipsis;
-  overflow: hidden;
+  background-color: var(--primary-color);
+  border-radius: 4px;
+  cursor: pointer;
+  max-width: 100%;
   white-space: nowrap;
-  border-radius: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 
 /* Day view styles */
 .day-view {
-  width: 80%;
-  height: 100vh;
-  padding: 20px;
-  box-sizing: border-box;
-  border-radius: 8px;
-  overflow-y: auto;
+  width: 100%;
+  max-width: 960px;
   margin: 0 auto;
+  padding: 20px;
+  background-color: var(--body-bg);
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  height: 100vh;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.hour-slots {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  width: 100%;
+  gap: 10px;
+}
+
+.hour-slot {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 60px;
+  background-color: transparent;
+  padding: 4px 0;
+  border: none;
+  border-bottom: 1px solid transparent; 
+  border-top: 1px solid transparent; 
+  border-right: 1px solid transparent; 
+  border-left: 1px solid transparent; 
+
+}
+
+.hour-label {
+  width: 60px;
+  padding-right: 10px;
+  font-size: 13px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  color: #999;
+  text-align: right;
+  font-weight: 400;
+border: none;
+  border-bottom: 1px solid transparent; 
+}
+}
+
+.event-space {
+  flex: 1;
+  padding: 5px 10px;
+  position: relative;
+  border-radius: 6px;
+  background-color: white;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  transition: background 0.2s;
+}
+
+.event-space:hover {
+  background-color: #f0f0f0;
 }
 
 .event-marker {
-  position: absolute;
-  left: -50%;
-  width: 200%;
-  padding: 4px;
   margin-top: 2px;
-  font-size: 12px;
+  padding: 2px 6px;
+  font-size: 11px;
   color: white;
-  border-radius: 3px;
+  background-color: var(--primary-color);
+  border-radius: 4px;
   cursor: pointer;
-  box-sizing: border-box;
+  max-width: 100%;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: center;
-  z-index: 1;
-}
-
-.delete-event {
-  background-color: #ff4444;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  cursor: pointer;
 }
 
 .event-marker:hover::after {
@@ -425,57 +478,6 @@ header h2 {
   min-width: 150px;
 }
 
-.day-view h3 {
-  text-align: center;
-  margin-bottom: 15px;
-  color: var(--text-color, #333);
-  font-size: 1.5rem;
-}
-
-.hour-slots {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  height: calc(100% - 50px);
-  overflow-y: auto;
-  min-width: 300px;
-  width: 100%;
-}
-
-.hour-slot {
-  display: flex;
-  height: 60px;
-  border-bottom: 1px solid #eee;
-  min-height: 60px;
-  width: 100%;
-}
-
-.hour-slot.compact {
-  height: 50px;
-  min-height: 50px;
-}
-
-.hour-label {
-  width: 120px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #666;
-  flex-shrink: 0;
-  padding: 0 10px;
-}
-
-.event-space {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-
-.event-space:hover {
-  background-color: #e6e6e6;
-}
 
 /* Three day view styles */
 .three-day-view {
@@ -635,6 +637,7 @@ header h2 {
 .save-notes:hover {
   opacity: 0.9;
 }
+
 
 @media screen and (max-width: 768px) {
   .days div {
