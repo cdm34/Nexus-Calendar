@@ -112,8 +112,9 @@
   </div>
 
   <script>
-    const userId = localStorage.getItem('nexusUserId');
-    document.getElementById('user-id-display').textContent = userId || 'Not logged in';
+     const display = document.getElementById('user-id-display');
+  const userId = localStorage.getItem('nexusUserId');
+  display.textContent = userId || 'Not logged in';
 
     document.getElementById('back-btn').addEventListener('click', () => {
       window.location.href = 'index.html';
@@ -166,3 +167,4 @@
   </script>
 </body>
 </html>
+
