@@ -1,9 +1,25 @@
 
-// DOM Elements
 const backBtn = document.getElementById('back-btn');
 const colorOptions = document.querySelectorAll('.color-option');
 const fontOptions = document.querySelectorAll('.font-option');
 const viewOptions = document.querySelectorAll('.view-option');
+
+
+const display = document.getElementById('user-id-display');
+  const userId = localStorage.getItem('nexusUserId');
+  display.textContent = userId || 'Not logged in';
+const displayElement = document.getElementById("user-id-display");
+
+if (userId && displayElement) {
+  fetch(`http://localhost:3001/user/${userId}`)
+    .then(res => res.json())
+    .then(data => {
+      displayElement.textContent = data.name || userId;
+    })
+    .catch(() => {
+      displayElement.textContent = userId;
+    });
+}
 
 // Color themes
 const colorThemes = [
@@ -112,12 +128,6 @@ function setView(view) {
 // Initialize the page on load
 initCustomizePage();
 
-// Event Listeners
-if (backBtn) {
-  backBtn.addEventListener('click', () => {
-    window.location.href = 'index.html';
-  });
-}
 
 colorOptions.forEach(option => {
   option.addEventListener('click', () => {
@@ -141,4 +151,167 @@ viewOptions.forEach(option => {
     setView(view);
     updateSelectedOptions();
   });
+});
+document.addEventListener("DOMContentLoaded", () => {
+  // BACK
+  document.getElementById("back-btn").addEventListener("click", () => {
+    window.location.href = "index.html";
+  });
+
+  // LOGOUT
+  document.getElementById("logout-btn").addEventListener("click", () => {
+    localStorage.clear();
+    alert("Logged out.");
+    window.location.href = "index.html";
+  });
+
+
+  // IMPORT ICS
+document.getElementById("import-btn").addEventListener("click", () => {
+  const fileInput = document.getElementById("import-ics");
+  const file = fileInput.files[0];
+  if (!file) return alert("Please select an ICS file.");
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const icsContent = e.target.result;
+
+    try {
+      const res = await fetch("http://localhost:3001/ics/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: localStorage.getItem("nexusUserId"),
+          icsData: icsContent
+        })
+      });
+
+      const data = await res.json();
+      alert(data.message || "Events imported!");
+    } catch (err) {
+      console.error("ICS import failed:", err);
+      alert("Error importing ICS file.");
+    }
+  };
+
+  reader.readAsText(file);
+});
+
+
+  // THEME TOGGLE
+  document.getElementById("theme-toggle").addEventListener("click", () => {
+    let current = parseInt(localStorage.getItem('nexusCalendar_theme') || 0);
+    current = (current + 1) % 6;
+    localStorage.setItem('nexusCalendar_theme', current);
+    alert("Theme updated. Return to calendar to view changes.");
+  });
+
+  // FONT TOGGLE
+  document.getElementById("font-toggle").addEventListener("click", () => {
+    let current = parseInt(localStorage.getItem('nexusCalendar_font') || 0);
+    current = (current + 1) % 4;
+    localStorage.setItem('nexusCalendar_font', current);
+    alert("Font updated. Return to calendar to view changes.");
+  });
+});
+
+const customColorPicker = document.getElementById("custom-primary");
+
+if (customColorPicker) {
+  // Set initial value from localStorage, or default to your blue
+  const savedCustomColor = localStorage.getItem("nexusCustomPrimary");
+  customColorPicker.value = savedCustomColor || "#6799b2";
+
+  // On change, save new color
+  customColorPicker.addEventListener("input", () => {
+    const newColor = customColorPicker.value;
+    localStorage.setItem("nexusCustomPrimary", newColor);
+    document.documentElement.style.setProperty('--primary-color', newColor);
+    alert("Primary color updated! Return to the calendar to see changes.");
+  });
+}
+
+document.getElementById("logout-btn").addEventListener("click", () => {
+  // Clear saved user info
+  localStorage.removeItem('nexusUserId');
+  localStorage.removeItem('nexusCalendar_view');
+  localStorage.removeItem('nexusCalendar_theme');
+  localStorage.removeItem('nexusCalendar_font');
+  localStorage.removeItem('nexusNotes');
+  
+
+  alert("You have been logged out.");
+  window.location.href = "log-in/log-in.html";
+});
+
+const nameInput = document.getElementById("display-name-input");
+const saveNameBtn = document.getElementById("save-name-btn");
+const nameSaveStatus = document.getElementById("name-save-status");
+
+if (nameInput && saveNameBtn && nameSaveStatus && userId) {
+  // Load from Firestore
+  fetch(`http://localhost:3001/user/${userId}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.name) {
+        nameInput.value = data.name;
+        document.getElementById("user-id-display").textContent = data.name;
+      } else {
+        document.getElementById("user-id-display").textContent = userId;
+      }
+    })
+    .catch(err => {
+      console.error("Failed to load name from backend:", err);
+      document.getElementById("user-id-display").textContent = userId;
+    });
+
+  // Save to backend
+  saveNameBtn.addEventListener("click", () => {
+    const name = nameInput.value.trim();
+    if (name.length === 0) {
+      nameSaveStatus.textContent = "Name cannot be empty.";
+      nameSaveStatus.style.color = "red";
+      return;
+    }
+
+    fetch(`http://localhost:3001/user/${userId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name })
+    })
+      .then(res => res.json())
+      .then(data => {
+        nameSaveStatus.textContent = "Name saved!";
+        nameSaveStatus.style.color = "green";
+        document.getElementById("user-id-display").textContent = name;
+
+        setTimeout(() => {
+          nameSaveStatus.textContent = "";
+        }, 2000);
+      })
+      .catch(err => {
+        console.error("Failed to save name:", err);
+        nameSaveStatus.textContent = "Failed to save name.";
+        nameSaveStatus.style.color = "red";
+      });
+  });
+}
+
+
+document.getElementById('back-btn').addEventListener('click', () => {
+  window.location.href = 'index.html';
+});
+
+document.getElementById("link-google-btn").addEventListener("click", () => {
+  const authUrl = "https://accounts.google.com/o/oauth2/auth";
+  const params = new URLSearchParams({
+    client_id: "163745154776-a7rnimll4ohaov0bc5q3peotqnbqkk50.apps.googleusercontent.com",
+    redirect_uri: "http://localhost:5500/redirect",
+    response_type: "code",
+    scope: "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email",
+    access_type: "offline",
+    prompt: "consent"
+  });
+
+  window.location.href = `${authUrl}?${params.toString()}`;
 });
