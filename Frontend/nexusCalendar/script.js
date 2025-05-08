@@ -26,36 +26,68 @@ document.querySelectorAll('.view-btn').forEach(btn => {
     localStorage.setItem('nexusCalendar_view', view);
     setActiveViewButton(btn);
 
-    if (view === 'day') {
+    if (currentView === 'day') {
       renderDayView(currentDay);
-    } else if (view === 'three-day') {
+
+    } else if (currentView === 'three-day') {
       renderThreeDayView(currentDay);
+
     } else {
       renderMonthView();
+
     }
   });
 });
 
-// MONTH NAVIGATION
 document.getElementById('prev-month').addEventListener('click', () => {
-  currentMonth--;
-  if (currentMonth < 0) {
-    currentMonth = 11;
-    currentYear--;
+  if (currentView === 'day') {
+    const date = new Date(currentYear, currentMonth, currentDay - 1);
+    currentYear = date.getFullYear();
+    currentMonth = date.getMonth();
+    currentDay = date.getDate();
+    renderDayView(currentDay);
+  } else if (currentView === 'three-day') {
+    const date = new Date(currentYear, currentMonth, currentDay - 3);
+    currentYear = date.getFullYear();
+    currentMonth = date.getMonth();
+    currentDay = date.getDate();
+    renderThreeDayView(currentDay);
+  } else {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    updateMonthDisplay();
+    renderMonthView();
   }
-  updateMonthDisplay();
-  renderMonthView();
 });
 
 document.getElementById('next-month').addEventListener('click', () => {
-  currentMonth++;
-  if (currentMonth > 11) {
-    currentMonth = 0;
-    currentYear++;
+  if (currentView === 'day') {
+    const date = new Date(currentYear, currentMonth, currentDay + 1);
+    currentYear = date.getFullYear();
+    currentMonth = date.getMonth();
+    currentDay = date.getDate();
+    renderDayView(currentDay);
+  } else if (currentView === 'three-day') {
+    const date = new Date(currentYear, currentMonth, currentDay + 3);
+    currentYear = date.getFullYear();
+    currentMonth = date.getMonth();
+    currentDay = date.getDate();
+    renderThreeDayView(currentDay);
+  } else {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    updateMonthDisplay();
+    renderMonthView();
+    renderEvents();
   }
-  updateMonthDisplay();
-  renderMonthView();
 });
+
 
 // SETTINGS PANEL TOGGLE
 document.getElementById('settings-btn').addEventListener('click', () => {
@@ -91,14 +123,21 @@ const saveStatus = document.getElementById('notes-save-status');
 // Load saved notes on page load
 notesTextarea.value = localStorage.getItem('nexusNotes') || '';
 
-// Show notes panel
 document.getElementById('notes-tab').addEventListener('click', () => {
-  document.getElementById('notes-panel').style.display = 'block';
+  document.getElementById('notes-panel').classList.toggle('open');
 });
 
-// Close notes panel
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('notes-panel');
+  const tab = document.getElementById('notes-tab');
+  if (!panel.contains(e.target) && !tab.contains(e.target)) {
+    panel.classList.remove('open');
+  }
+});
+
+
 document.getElementById('close-notes').addEventListener('click', () => {
-  document.getElementById('notes-panel').style.display = 'none';
+  document.getElementById('notes-panel').classList.remove('open');
 });
 
 // Save notes
@@ -113,6 +152,7 @@ document.getElementById('save-notes').addEventListener('click', () => {
 // Delete note for user only
 document.getElementById('delete-note-user').addEventListener('click', () => {
   notesTextarea.value = '';
+
   localStorage.removeItem('nexusNotes');
 });
 
@@ -130,37 +170,36 @@ document.getElementById('delete-event-btn').addEventListener('click', async (e) 
   e.preventDefault(); 
   e.stopPropagation(); 
 
-  const eventId = document.getElementById('event-maker').dataset.editing;
   const userId = localStorage.getItem('nexusUserId');
+  const editingId = document.getElementById('event-maker').dataset.editing;
 
-  if (!eventId || !userId) {
-    alert("Missing event ID or user ID.");
-    return;
+
+console.log("User ID:", userId);
+console.log("Event ID:", editingId);
+
+
+try {
+  const res = await fetch(`http://localhost:3001/events/${userId}/${editingId}`, {
+    method: 'DELETE'
+  });
+
+  const result = await res.json();
+  if (res.ok) {
+    document.getElementById('event-maker').style.display = 'none';
+    document.getElementById('event-maker').dataset.editing = '';
+
+    if (currentView === 'day')       renderDayView(currentDay);
+    else if (currentView === 'three-day') renderThreeDayView(currentDay);
+    else renderMonthView();
+
+  } else {
+    alert(result.error);
   }
+} catch (err) {
+  console.error("Delete failed:", err);
+  alert("Error deleting event.");
+}
 
-  const confirmDelete = confirm("Are you sure you want to delete this event?");
-  if (!confirmDelete) return;
-
-  console.log("Attempting to delete event:", eventId, "for user:", userId);
-
-  try {
-    const res = await fetch(`http://localhost:3001/events/${userId}/${eventId}`, {
-      method: 'DELETE'
-    });
-
-    const result = await res.json();
-    if (res.ok) {
-      alert(result.message);
-      document.getElementById('event-maker').style.display = 'none';
-      document.getElementById('event-maker').dataset.editing = '';
-      renderEvents(); // Refresh the calendar
-    } else {
-      alert(result.error);
-    }
-  } catch (err) {
-    console.error("Delete failed:", err);
-    alert("Error deleting event.");
-  }
 });
 
 
@@ -177,7 +216,7 @@ document.getElementById('event-form').addEventListener('submit', createEvent);
   let currentMonth = today.getMonth();
   let currentYear = today.getFullYear();
 
- const display = document.getElementById('user-id-display');
+  const display = document.getElementById('user-id-display');
   const userId = localStorage.getItem('nexusUserId');
   display.textContent = userId || 'Not logged in';
 
@@ -205,6 +244,16 @@ function hideEventMaker() {
   }
 
   function init() {
+if (currentView === 'day') {
+      renderEventsForDay(currentDay);
+
+    } else if (currentView === 'three-day') {
+      renderEventsForThreeDays();
+
+    } else {
+      renderEvents();
+
+    }
     applyTheme(parseInt(localStorage.getItem('nexusCalendar_theme') || 0));
     applyFont(parseInt(localStorage.getItem('nexusCalendar_font') || 0));
     updateMonthDisplay();
@@ -227,6 +276,7 @@ function hideEventMaker() {
         break;
       default:
         renderMonthView();
+        renderEvents;
         break;
     }
 
@@ -234,8 +284,133 @@ function hideEventMaker() {
 
   init();
 
+function renderThreeDayView(startDay) {
+  weekdaysEl.style.display = 'none';
+  daysEl.innerHTML = '';
+  daysEl.className = 'days three-day-view';
+  daysEl.style.display = 'flex';
+  daysEl.style.flexDirection = 'row';
+  daysEl.style.justifyContent = 'space-between';
+
+  const container = document.createElement('div');
+  container.className = 'three-day-container';
+  container.style.display = 'flex';
+  container.style.width = '100%';
+
+  const baseDate = new Date(currentYear, currentMonth, startDay);
+
+  for (let offset = 0; offset < 3; offset++) {
+    const dayDate = new Date(baseDate);
+    dayDate.setDate(baseDate.getDate() + offset);
+
+    const dayColumn = document.createElement('div');
+    dayColumn.className = 'three-day-column';
+    dayColumn.style.flex = '1';
+    dayColumn.style.borderLeft = '1px solid #ccc';
+    dayColumn.style.padding = '0 5px';
+
+    const label = document.createElement('div');
+    label.className = 'three-day-label';
+    label.textContent = dayDate.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    });
+    label.style.textAlign = 'center';
+    label.style.marginBottom = '8px';
+    label.style.fontWeight = 'normal';
+
+    const hourSlots = document.createElement('div');
+    hourSlots.className = 'hour-slots';
+
+    for (let hour = 0; hour < 24; hour++) {
+      const slot = document.createElement('div');
+      slot.className = 'hour-slot';
+
+      const hourLabel = document.createElement('div');
+      hourLabel.className = 'hour-label';
+      hourLabel.textContent = new Date(0, 0, 0, hour).toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+
+      const eventSpace = document.createElement('div');
+      eventSpace.className = 'event-space';
+
+      eventSpace.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const hourStr = hour.toString().padStart(2, '0');
+        const isoDate = dayDate.toISOString().split('T')[0];
+
+        document.getElementById('event-date').value = isoDate;
+        document.getElementById('event-start').value = `${hourStr}:00`;
+        document.getElementById('event-end').value = `${hourStr}:30`;
+
+        const eventMaker = document.getElementById('event-maker');
+        eventMaker.style.display = 'block';
+        eventMaker.dataset.editing = '';
+      });
+
+      slot.appendChild(hourLabel);
+      slot.appendChild(eventSpace);
+      hourSlots.appendChild(slot);
+    }
+
+    dayColumn.appendChild(label);
+    dayColumn.appendChild(hourSlots);
+    container.appendChild(dayColumn);
+  }
+
+  daysEl.appendChild(container);
+
+  renderEventsForThreeDays(startDay);
+}
+
+
+async function renderEventsForThreeDays(startDay) {
+  const res = await fetch(`http://localhost:3001/events?userId=${userId}&month=${currentMonth + 1}&year=${currentYear}`);
+  const data = await res.json();
+  if (!Array.isArray(data.events)) return;
+
+  const slots = document.querySelectorAll('.three-day-column');
+  const baseDate = new Date(currentYear, currentMonth, startDay);
+
+  for (let offset = 0; offset < 3; offset++) {
+    const dayDate = new Date(baseDate);
+    dayDate.setDate(baseDate.getDate() + offset);
+    const selectedDate = dayDate.toISOString().split('T')[0];
+
+    const matchingEvents = data.events.filter(evt => evt.date === selectedDate);
+
+    const hourSlots = slots[offset].querySelectorAll('.event-space');
+
+    matchingEvents.forEach(evt => {
+      const startHour = new Date(evt.startTime).getHours();
+      const marker = document.createElement('div');
+      marker.className = 'event-marker';
+      marker.textContent = `${evt.title} (${new Date(evt.startTime).toLocaleTimeString([], {
+        hour: 'numeric', minute: '2-digit'
+      })})`;
+      marker.style.backgroundColor = evt.color || '#444';
+
+      marker.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openEventEditor(evt);
+      });
+
+
+      const duration = (new Date(evt.endTime) - new Date(evt.startTime)) / (1000 * 60); // in minutes
+      marker.style.height = `${(duration / 60) * 10}%`;
+      marker.addEventListener('click', () => openEventEditor(evt));
+
+      hourSlots[startHour]?.appendChild(marker);
+    });
+  }
+}
+
 
 async function createEvent(event) {
+
   event.preventDefault();
 
   const title = document.getElementById('event-title').value;
@@ -276,9 +451,13 @@ async function createEvent(event) {
     const data = await res.json();
     if (res.ok) {
       console.log(editingId ? 'Event updated' : 'Event created', data);
+      if (!editingId && data.eventId) {
+        document.getElementById('event-maker').dataset.editing = data.eventId;
+      }
     } else {
       alert(`Error: ${data.error}`);
     }
+
   } catch (err) {
     console.error('Network error saving event:', err);
     alert('Network error saving event.');
@@ -288,34 +467,29 @@ async function createEvent(event) {
   document.getElementById('event-maker').dataset.editing = ''; // Clear edit mode
   console.log("Rendering after deletion...");
 
-  renderEvents(); // Refresh calendar
-}
 
-
-document.querySelectorAll('.view-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const view = btn.getAttribute('data-view');
-    currentView = view;
-    localStorage.setItem('nexusCalendar_view', view);
-    setActiveViewButton(btn);
-
-    if (view === 'day') {
-      renderDayView(currentDay);
-    } else if (view === 'three-day') {
-      renderThreeDayView(currentDay);
-    } else {
-      renderMonthView();
-    }
-  });
-});
-
-
+    switch (currentView) {
+      case 'day':
+        renderDayView(currentDay);
+        break;
+      case 'three-day':
+        renderThreeDayView(currentDay);
+        break;
+      default:
+        renderMonthView();
+        break;
+    }}
 
 
 function renderMonthView() {
   weekdaysEl.style.display = 'grid';
+
   daysEl.innerHTML = '';
+  daysEl.className = 'days';
+  daysEl.style.display = 'grid';
   daysEl.style.gridTemplateColumns = 'repeat(7, 1fr)';
+  daysEl.style.gridTemplateRows = '';
+  daysEl.style.overflowY = 'auto'; // allow scroll if needed
 
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -332,13 +506,18 @@ function renderMonthView() {
   for (let i = 1; i <= daysInMonth; i++) {
     const div = document.createElement('div');
     div.textContent = i;
-    if (i === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()) {
+    if (
+      i === today.getDate() &&
+      currentMonth === today.getMonth() &&
+      currentYear === today.getFullYear()
+    ) {
       div.classList.add('today');
     }
-    div.addEventListener('click', () => showEventMaker(new Date(currentYear, currentMonth, i).toISOString()));
+    div.addEventListener('click', () =>
+      showEventMaker(new Date(currentYear, currentMonth, i).toISOString())
+    );
     daysEl.appendChild(div);
   }
-
 
   const totalCells = 42;
   for (let i = 1; i <= totalCells - daysInMonth - firstDay; i++) {
@@ -347,9 +526,12 @@ function renderMonthView() {
     div.classList.add('other-month');
     daysEl.appendChild(div);
   }
+  renderEvents(); // Refresh calendar
 
-  renderEvents();
+
 }
+
+
 
 async function renderEvents() {
   const res = await fetch(`http://localhost:3001/events?userId=${userId}&month=${currentMonth + 1}&year=${currentYear}`);
@@ -366,33 +548,131 @@ async function renderEvents() {
       const evtDate = new Date(evt.startTime);
       return evtDate.getDate() === dateNum && evtDate.getMonth() === currentMonth && evtDate.getFullYear() === currentYear;
     });
+matchingEvents
+  .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
+  .forEach(evt => {
+    const marker = document.createElement('div');
+    marker.className = 'event-marker';
+    marker.style.backgroundColor = evt.color || '#444';
+    marker.textContent = `${evt.title} (${new Date(evt.startTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })})`;
 
-    matchingEvents.forEach(evt => {
-      const marker = document.createElement('div');
-      marker.className = 'event-marker';
-      marker.style.backgroundColor = evt.color || '#444';
-      marker.textContent = `${evt.title} (${new Date(evt.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
-  
-      marker.addEventListener('click', () => openEventEditor(evt));
+    marker.addEventListener('click', () => openEventEditor(evt));
 
-      div.appendChild(marker);
-});
+    div.appendChild(marker);
+  });
+
   });
 }
+
+function renderDayView(day) {
+  weekdaysEl.style.display = 'none';
+  daysEl.innerHTML = '';
+  daysEl.className = 'days day-view';
+  daysEl.style.display = 'block';
+
+  const container = document.createElement('div');
+  container.className = 'hour-slots';
+
+  const dateLabel = document.createElement('div');
+  const dateObj = new Date(currentYear, currentMonth, day);
+  dateLabel.textContent = dateObj.toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric'
+  });
+  dateLabel.style.textAlign = 'center';
+  dateLabel.style.margin = '10px 0';
+  dateLabel.style.fontWeight = 'normal'; 
+  dateLabel.style.fontSize = '1.1rem';
+
+  daysEl.appendChild(dateLabel);
+
+  for (let hour = 0; hour < 24; hour++) {
+    const slot = document.createElement('div');
+    slot.className = 'hour-slot';
+  slot.addEventListener('click', () => {
+    const hourStr = hour.toString().padStart(2, '0');
+    const date = new Date(currentYear, currentMonth, day);
+    const isoDate = date.toISOString().split('T')[0];
+
+    document.getElementById('event-date').value = isoDate;
+    document.getElementById('event-start').value = `${hourStr}:00`;
+    document.getElementById('event-end').value = `${hourStr}:30`;
+
+    const eventMaker = document.getElementById('event-maker');
+    eventMaker.style.display = 'block';
+  });
+
+
+    const label = document.createElement('div');
+    label.className = 'hour-label';
+    label.textContent = new Date(0, 0, 0, hour).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+    const eventSpace = document.createElement('div');
+    eventSpace.className = 'event-space';
+
+    slot.appendChild(label);
+    slot.appendChild(eventSpace);
+    container.appendChild(slot);
+  }
+
+  daysEl.appendChild(container);
+  renderEventsForDay(day);
+}
+
+
+async function renderEventsForDay(day) {
+  const res = await fetch(`http://localhost:3001/events?userId=${userId}&month=${currentMonth + 1}&year=${currentYear}`);
+  const data = await res.json();
+
+
+  if (!Array.isArray(data.events)) return;
+
+  const slots = document.querySelectorAll('.event-space');
+  slots.forEach(slot => slot.innerHTML = '');
+
+  const selectedDate = new Date(currentYear, currentMonth, day).toISOString().split('T')[0];
+
+  const dayEvents = data.events.filter(evt => evt.date === selectedDate);
+
+  dayEvents.forEach(evt => {
+  const startHour = new Date(evt.startTime).getHours();
+
+  const marker = document.createElement('div');
+  marker.className = 'event-marker';
+  marker.textContent = `${evt.title} (${new Date(evt.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+  marker.style.backgroundColor = evt.color || '#444';
+
+  if (!evt.id) {
+    console.warn("Event missing ID:", evt);
+    return;  // skip if no ID
+  }
+
+  marker.addEventListener('click', () => openEventEditor(evt));
+
+  const duration = (new Date(evt.endTime) - new Date(evt.startTime)) / (1000 * 60);
+  marker.style.height = `${(duration / 60) * 10}%`;
+
+  slots[startHour]?.appendChild(marker);
+});
+
+}
+
+
 function openEventEditor(event) {
   const eventMaker = document.getElementById('event-maker');
   eventMaker.style.display = 'block';
 
-  // Populate the form fields with the event data
   document.getElementById('event-title').value = event.title;
   document.getElementById('event-date').value = event.date;
   document.getElementById('event-start').value = event.startTime.split('T')[1];
   document.getElementById('event-end').value = event.endTime.split('T')[1];
   document.getElementById('event-color').value = event.color || '#6799b2';
 
-  // Save the event ID for later (deletion)
+  console.log("Setting dataset.editing to:", event.id);  
   eventMaker.dataset.editing = event.id;
 }
+
 
 // Utility for applying theme and font
 function applyTheme(index) {
@@ -419,8 +699,13 @@ function showEventMaker(dateString) {
   eventMaker.style.display = 'block';
   const date = new Date(dateString);
   document.getElementById('event-date').value = date.toISOString().split('T')[0];
-  document.getElementById('event-start').value = '09:00';
-  document.getElementById('event-end').value = '10:00';
+
+  if (!eventMaker.dataset.editing) {
+    document.getElementById('event-start').value = '';
+    document.getElementById('event-end').value = '';
+  }
 }
+
 });
+
 
