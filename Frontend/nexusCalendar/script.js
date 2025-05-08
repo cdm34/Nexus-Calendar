@@ -1,6 +1,23 @@
 document.addEventListener("DOMContentLoaded", () => {
 
 
+
+  const colorThemes = [
+    { primary: '#f5f5f0', secondary: '#f0f0f0', text: '#333', bodyBg: '#f5f5f0', name: 'Default' },
+    { primary: '#e74c3c', secondary: '#f9e7e7', text: '#444', bodyBg: '#f5f5f0', name: 'Red' },
+    { primary: '#2ecc71', secondary: '#e8f5e8', text: '#333', bodyBg: '#f5f5f0', name: 'Green' },
+    { primary: '#9b59b6', secondary: '#f4e8f9', text: '#444', bodyBg: '#f5f5f0', name: 'Purple' },
+    { primary: '#f39c12', secondary: '#fef5e7', text: '#333', bodyBg: '#f5f5f0', name: 'Orange' },
+    { primary: '#2c3e50', secondary: '#2c3e50', text: '#ffffff', bodyBg: '#000000', name: 'Night Mode' }
+  ];
+  const fontFamilies = [
+  '"Jost", sans-serif',     // Default
+  'Arial, sans-serif',
+  '"Courier New", monospace',
+  '"Times New Roman", serif'
+];
+
+
 // VIEW SWITCHING
 document.querySelectorAll('.view-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -54,26 +71,54 @@ document.getElementById('color-theme').addEventListener('click', () => {
   applyTheme(current);
 });
 
-// FONT SWITCHING
-const fontFamilies = ['"Jost", sans-serif', '"Comfortaa", sans-serif', '"Sora", sans-serif'];
-document.getElementById('font-change').addEventListener('click', () => {
-  let current = parseInt(localStorage.getItem('nexusCalendar_font') || 0);
-  current = (current + 1) % fontFamilies.length;
-  localStorage.setItem('nexusCalendar_font', current);
-  applyFont(current);
-});
 
-// GROUP SETTINGS BUTTON (you can link this to a real settings page or modal later)
+
+// GROUP SETTINGS BUTTON 
 document.getElementById('group-settings').addEventListener('click', () => {
   window.location.href = 'group-settings.html';
 });
 
+
+// SETTINGS PAGE BUTTON 
+document.getElementById('settings-change').addEventListener('click', () => {
+  window.location.href = 'customize.html';
+});
+
 // NOTES PANEL TOGGLE
+const notesTextarea = document.getElementById('notes-textarea');
+const saveStatus = document.getElementById('notes-save-status');
+
+// Load saved notes on page load
+notesTextarea.value = localStorage.getItem('nexusNotes') || '';
+
+// Show notes panel
 document.getElementById('notes-tab').addEventListener('click', () => {
   document.getElementById('notes-panel').style.display = 'block';
 });
+
+// Close notes panel
 document.getElementById('close-notes').addEventListener('click', () => {
   document.getElementById('notes-panel').style.display = 'none';
+});
+
+// Save notes
+document.getElementById('save-notes').addEventListener('click', () => {
+  const notes = notesTextarea.value;
+  localStorage.setItem('nexusNotes', notes);
+  saveStatus.textContent = "Saved!";
+  setTimeout(() => (saveStatus.textContent = ''), 2000);
+});
+
+
+// Delete note for user only
+document.getElementById('delete-note-user').addEventListener('click', () => {
+  notesTextarea.value = '';
+  localStorage.removeItem('nexusNotes');
+});
+
+// Placeholder for delete note for everyone
+document.getElementById('delete-note-everyone').addEventListener('click', () => {
+  alert("Delete for everyone triggered (placeholder logic).");
 });
 
 // EVENT MODAL BUTTONS
@@ -81,7 +126,10 @@ document.getElementById('cancel-event').addEventListener('click', () => {
 document.getElementById('event-maker').style.display = 'none';
 });
 
-document.getElementById('delete-event-btn').addEventListener('click', async () => {
+document.getElementById('delete-event-btn').addEventListener('click', async (e) => {
+  e.preventDefault(); 
+  e.stopPropagation(); 
+
   const eventId = document.getElementById('event-maker').dataset.editing;
   const userId = localStorage.getItem('nexusUserId');
 
@@ -93,6 +141,8 @@ document.getElementById('delete-event-btn').addEventListener('click', async () =
   const confirmDelete = confirm("Are you sure you want to delete this event?");
   if (!confirmDelete) return;
 
+  console.log("Attempting to delete event:", eventId, "for user:", userId);
+
   try {
     const res = await fetch(`http://localhost:3001/events/${userId}/${eventId}`, {
       method: 'DELETE'
@@ -102,16 +152,8 @@ document.getElementById('delete-event-btn').addEventListener('click', async () =
     if (res.ok) {
       alert(result.message);
       document.getElementById('event-maker').style.display = 'none';
-      document.getElementById('event-maker').dataset.editing = ''; // Clear edit mode
-
-      // Properly re-render based on current view
-      if (currentView === 'day') {
-        renderDayView(currentDay);
-      } else if (currentView === 'three-day') {
-        renderThreeDayView(currentDay);
-      } else {
-        renderMonthView();
-      }
+      document.getElementById('event-maker').dataset.editing = '';
+      renderEvents(); // Refresh the calendar
     } else {
       alert(result.error);
     }
@@ -123,33 +165,10 @@ document.getElementById('delete-event-btn').addEventListener('click', async () =
 
 
 
+
 document.getElementById('event-form').addEventListener('submit', createEvent);
 
-// NOTES SAVE
-document.getElementById('save-notes').addEventListener('click', () => {
-  const notes = document.getElementById('notes-textarea').value;
-  localStorage.setItem('nexusNotes', notes);
-  document.getElementById('notes-save-status').textContent = "Saved!";
-  setTimeout(() => document.getElementById('notes-save-status').textContent = '', 2000);
-});
 
-// DELETE NOTES (placeholders – add real logic later)
-document.getElementById('delete-note-user').addEventListener('click', () => {
-  document.getElementById('notes-textarea').value = '';
-});
-document.getElementById('delete-note-everyone').addEventListener('click', () => {
-  alert("Delete for everyone triggered.");
-});
-
-
-  const colorThemes = [
-    { primary: '#f5f5f0', secondary: '#f0f0f0', text: '#333', bodyBg: '#f5f5f0', name: 'Default' },
-    { primary: '#e74c3c', secondary: '#f9e7e7', text: '#444', bodyBg: '#f5f5f0', name: 'Red' },
-    { primary: '#2ecc71', secondary: '#e8f5e8', text: '#333', bodyBg: '#f5f5f0', name: 'Green' },
-    { primary: '#9b59b6', secondary: '#f4e8f9', text: '#444', bodyBg: '#f5f5f0', name: 'Purple' },
-    { primary: '#f39c12', secondary: '#fef5e7', text: '#333', bodyBg: '#f5f5f0', name: 'Orange' },
-    { primary: '#2c3e50', secondary: '#2c3e50', text: '#ffffff', bodyBg: '#000000', name: 'Night Mode' }
-  ];
 
 
   const monthNames = [ "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" ];
@@ -161,6 +180,12 @@ document.getElementById('delete-note-everyone').addEventListener('click', () => 
  const display = document.getElementById('user-id-display');
   const userId = localStorage.getItem('nexusUserId');
   display.textContent = userId || 'Not logged in';
+
+if (!userId) {
+  alert("Please log in.");
+  window.location.href = "log-in/login.html";
+}
+
 
   let currentView = localStorage.getItem('nexusCalendar_view') || 'month';
 
@@ -261,6 +286,8 @@ async function createEvent(event) {
 
   document.getElementById('event-maker').style.display = 'none';
   document.getElementById('event-maker').dataset.editing = ''; // Clear edit mode
+  console.log("Rendering after deletion...");
+
   renderEvents(); // Refresh calendar
 }
 
@@ -369,11 +396,13 @@ function openEventEditor(event) {
 
 // Utility for applying theme and font
 function applyTheme(index) {
-  const t = colorThemes[index];
-  document.documentElement.style.setProperty('--primary-color', t.primary);
-  document.documentElement.style.setProperty('--secondary-color', t.secondary);
-  document.documentElement.style.setProperty('--text-color', t.text);
-  document.body.style.backgroundColor = t.bodyBg;
+  const theme = colorThemes[index];
+  const customPrimary = localStorage.getItem("nexusCustomPrimary") || "#6799b2";
+
+  document.documentElement.style.setProperty('--primary-color', customPrimary);
+  document.documentElement.style.setProperty('--secondary-color', theme.secondary);
+  document.documentElement.style.setProperty('--text-color', theme.text);
+  document.body.style.backgroundColor = theme.bodyBg;
 }
 
 function applyFont(index) {
@@ -394,3 +423,4 @@ function showEventMaker(dateString) {
   document.getElementById('event-end').value = '10:00';
 }
 });
+
