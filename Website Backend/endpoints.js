@@ -178,32 +178,38 @@ app.get('/events', async (req, res) => {
             return res.status(400).json({ error: "userId, month, and year are required query parameters." });
         }
 
-        const eventsRef = db
-            .collection("users")
-            .doc(userId)
-            .collection("calendars")
-            .doc("google")
-            .collection("events");
+        const calendarProviders = ['google', 'ICS'];
+        const allEvents = [];
 
-        const snapshot = await eventsRef.get();
+        for (const provider of calendarProviders) {
+            const eventsRef = db
+                .collection("users")
+                .doc(userId)
+                .collection("calendars")
+                .doc(provider)
+                .collection("events");
 
-        if (snapshot.empty) {
+            const snapshot = await eventsRef.get();
+
+            if (!snapshot.empty) {
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const startDate = new Date(data.startTime);
+                    if (
+                        startDate.getFullYear() === parseInt(year) &&
+                        startDate.getMonth() + 1 === parseInt(month)
+                    ) {
+                        allEvents.push({ id: doc.id, provider, ...data });
+                    }
+                });
+            }
+        }
+
+        if (allEvents.length === 0) {
             return res.status(404).json({ message: "No events found." });
         }
 
-        const filteredEvents = [];
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const startDate = new Date(data.startTime);
-            if (
-                startDate.getFullYear() === parseInt(year) &&
-                startDate.getMonth() + 1 === parseInt(month)
-            ) {
-                filteredEvents.push({ id: doc.id, ...data });
-            }
-        });
-
-        res.status(200).json({ events: filteredEvents });
+        res.status(200).json({ events: allEvents });
     } catch (error) {
         console.error("Error retrieving events:", error);
         res.status(500).json({ error: "Internal server error" });
