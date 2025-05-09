@@ -4,8 +4,6 @@ const admin = require('firebase-admin');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors'); // You also need this if it's missing
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-const fs = require('fs');
-const { google } = require('googleapis');
 
 
 const app = express(); 
@@ -18,85 +16,6 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
-
-// Google OAuth setup
-const credentials = JSON.parse(
-fs.readFileSync('client_secret_163745154776-a7rnimll4ohaov0bc5q3peotqnbqkk50.apps.googleusercontent.com.json')
-);
-const { client_id, client_secret, redirect_uris } = credentials.web;
-const oauth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[2]);
-
-// OAuth flow route
-app.get('/', (req, res) => {
-    const url = oauth2Client.generateAuthUrl({
-        access_type: 'offline',
-        scope: 'https://www.googleapis.com/auth/calendar.readonly'
-    });
-    res.redirect(url);
-});
-
-app.get('/redirect', (req, res) => {
-    const code = req.query.code;
-    if (!code) return res.status(400).send('Missing code parameter');
-
-    oauth2Client.getToken(code, (err, tokens) => {
-        if (err) {
-        console.error('Token exchange error:', err.response?.data || err);
-        return res.status(500).send('Token error');
-        }
-        oauth2Client.setCredentials(tokens);
-        fs.writeFileSync('token.json', JSON.stringify(tokens));
-        res.redirect('http://localhost:5500/index.html?synced=true');
-    });
-});
-
-app.get('/sync-events', async (req, res) => {
-    try {
-      const calendarId = req.query.calendar ?? 'primary';
-      const userId = req.query.userId;          // nexusUserId coming from the client
-  
-      console.log(userId)
-
-      if (!userId) {
-        return res.status(400).json({ error: 'Missing userId query parameter.' });
-      }
-  
-      // Make sure oauth2Client already has valid credentials (step 1 above)
-      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-  
-      // Pull the next 15 upcoming events
-      const gRes = await calendar.events.list({
-        calendarId,
-        timeMin: new Date().toISOString(),
-        maxResults: 15,
-        singleEvents: true,
-        orderBy: 'startTime'
-      });
-  
-      const events = gRes.data.items;
-      const batch  = db.batch();
-  
-      // Store each event in Firestore
-      events.forEach(event => {
-        const eventRef = db.collection(`users/${userId}/calendars/google/events`).doc(event.id);
-        batch.set(eventRef, {
-          title: event.summary,
-          startTime: event.start.dateTime || event.start.date,
-          endTime: event.end.dateTime || event.end.date,
-          description: event.description || "",
-          location: event.location || "",
-          calendarType: "Google"
-        });
-      });
-  
-      await batch.commit();
-      res.status(200).json({ message: 'Events synced to Firestore', events });
-    } catch (err) {
-      console.error('Error syncing events:', err);
-      res.status(500).json({ error: 'Failed to sync events.' });
-    }
-  });
-  
 
 app.post('/register', async (req, res) => {
     try {
@@ -178,38 +97,32 @@ app.get('/events', async (req, res) => {
             return res.status(400).json({ error: "userId, month, and year are required query parameters." });
         }
 
-        const calendarProviders = ['google', 'ICS'];
-        const allEvents = [];
+        const eventsRef = db
+            .collection("users")
+            .doc(userId)
+            .collection("calendars")
+            .doc("google")
+            .collection("events");
 
-        for (const provider of calendarProviders) {
-            const eventsRef = db
-                .collection("users")
-                .doc(userId)
-                .collection("calendars")
-                .doc(provider)
-                .collection("events");
+        const snapshot = await eventsRef.get();
 
-            const snapshot = await eventsRef.get();
-
-            if (!snapshot.empty) {
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const startDate = new Date(data.startTime);
-                    if (
-                        startDate.getFullYear() === parseInt(year) &&
-                        startDate.getMonth() + 1 === parseInt(month)
-                    ) {
-                        allEvents.push({ id: doc.id, provider, ...data });
-                    }
-                });
-            }
-        }
-
-        if (allEvents.length === 0) {
+        if (snapshot.empty) {
             return res.status(404).json({ message: "No events found." });
         }
 
-        res.status(200).json({ events: allEvents });
+        const filteredEvents = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const startDate = new Date(data.startTime);
+            if (
+                startDate.getFullYear() === parseInt(year) &&
+                startDate.getMonth() + 1 === parseInt(month)
+            ) {
+                filteredEvents.push({ id: doc.id, ...data });
+            }
+        });
+
+        res.status(200).json({ events: filteredEvents });
     } catch (error) {
         console.error("Error retrieving events:", error);
         res.status(500).json({ error: "Internal server error" });
@@ -364,7 +277,7 @@ app.post('/accept-invite', async (req, res) => {
 
 app.post('/decline-invite', async (req, res) => {
     try {
-        const { userId, groupId } = req.body;
+        const { userId, groupId } = req.params;
 
         if (!userId || !groupId) {
             return res.status(400).json({ error: "userId and groupId are required." });
@@ -430,6 +343,7 @@ app.delete('/events/:userId/:eventId', async (req, res) => {
       .doc(eventId);
 
     await eventRef.delete();
+console.log(`Deleted event ${eventId} for user ${userId}`); 
 
     res.status(200).json({ message: 'Event deleted successfully' });
   } catch (error) {
@@ -461,6 +375,239 @@ app.put('/events/:userId/:eventId', async (req, res) => {
   } catch (error) {
     console.error("Error updating event:", error);
     res.status(500).json({ error: "Failed to update event." });
+  }
+});
+
+const router = express.Router();
+
+app.get('/redirect', async (req, res) => {
+  const code = req.query.code;
+
+  const body = {
+    code,
+    client_id: "163745154776-a7rnimll4ohaov0bc5q3peotqnbqkk50.apps.googleusercontent.com",
+    client_secret: "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",
+    redirect_uri: "http://localhost:5500/redirect",
+    grant_type: "authorization_code"
+  };
+
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+
+    const data = await response.json();
+    console.log("Token response:", data);
+
+    // Save to Firestore if needed
+     res.redirect("http://localhost:5500/customization.html?linked=true");
+  } catch (err) {
+    console.error("Token exchange failed:", err);
+    res.status(500).send("OAuth failed");
+  }
+});
+
+// Save group note with timestamp and name
+app.post('/notes/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { notes, name } = req.body;
+
+  if (!notes || !userId || !name) {
+    return res.status(400).json({ error: 'Missing notes, userId, or name' });
+  }
+
+  const timestamp = new Date();
+
+  try {
+    await db
+      .collection('users')
+      .doc(userId)
+      .collection('notes')
+      .add({
+        text: notes,
+        name: name,
+        timestamp
+      });
+    res.status(200).json({ message: 'Note saved' });
+  } catch (err) {
+    console.error('Error saving note:', err);
+    res.status(500).json({ error: 'Failed to save note' });
+  }
+});
+
+// Load all notes for a user
+app.get('/notes/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const snapshot = await db
+      .collection('users')
+      .doc(userId)
+      .collection('notes')
+      .orderBy('timestamp', 'desc')
+      .get();
+
+    const notes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    res.status(200).json({ notes });
+  } catch (err) {
+    console.error('Error fetching notes:', err);
+    res.status(500).json({ error: 'Failed to load notes' });
+  }
+});
+
+// Delete a note by ID
+app.delete('/notes/:userId/:noteId', async (req, res) => {
+  const { userId, noteId } = req.params;
+
+  try {
+    await db
+      .collection('users')
+      .doc(userId)
+      .collection('notes')
+      .doc(noteId)
+      .delete();
+
+    res.status(200).json({ message: 'Note deleted' });
+  } catch (err) {
+    console.error('Error deleting note:', err);
+    res.status(500).json({ error: 'Failed to delete note' });
+  }
+});
+
+// Load upcoming events for the current user (limit to next 5)
+app.get('/upcoming-events/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const now = new Date().toISOString();
+
+  try {
+    const snapshot = await db
+      .collection('users')
+      .doc(userId)
+      .collection('calendars')
+      .doc('google')
+      .collection('events')
+      .where('startTime', '>=', now)
+      .orderBy('startTime')
+      .limit(5)
+      .get();
+
+    const events = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    res.status(200).json({ events });
+  } catch (err) {
+    console.error('Error fetching upcoming events:', err);
+    res.status(500).json({ error: 'Failed to load events' });
+  }
+});
+
+app.get('/users/:userId/groups', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const snapshot = await db
+      .collection('users')
+      .doc(userId)
+      .collection('groups')
+      .get();
+
+    const groups = snapshot.docs.map(doc => doc.data());
+
+    res.status(200).json({ groups });
+  } catch (err) {
+    console.error("Error fetching user groups:", err);
+    res.status(500).json({ error: "Failed to load user groups" });
+  }
+});
+
+app.get('/groups/:groupId', async (req, res) => {
+  try {
+    const groupDoc = await db.collection('Groups').doc(req.params.groupId).get();
+    if (!groupDoc.exists) return res.status(404).json({ error: "Group not found" });
+
+    res.status(200).json(groupDoc.data());
+  } catch (err) {
+    console.error("Error fetching group:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+app.get('/groups/:groupId/members', async (req, res) => {
+  const { groupId } = req.params;
+
+  try {
+    const snapshot = await db
+      .collection('Groups')
+      .doc(groupId)
+      .collection('members')
+      .get();
+
+    const members = [];
+
+    for (const doc of snapshot.docs) {
+      const memberId = doc.id;
+      const memberData = doc.data();
+
+      const userDoc = await db.collection('users').doc(memberId).get();
+      const userName = userDoc.exists ? userDoc.data().name : null;
+
+      members.push({
+        userId: memberId,
+        name: userName,
+        isCreator: !!memberData.isCreator
+      });
+    }
+
+    res.status(200).json({ members });
+  } catch (err) {
+    console.error("Error fetching group members:", err);
+    res.status(500).json({ error: "Failed to load group members" });
+  }
+});
+
+app.post('/join-group', async (req, res) => {
+  const { userId, groupId } = req.body;
+
+  if (!userId || !groupId) {
+    return res.status(400).json({ error: "userId and groupId are required." });
+  }
+
+  try {
+    const groupDoc = await db.collection("Groups").doc(groupId).get();
+    if (!groupDoc.exists) {
+      return res.status(404).json({ error: "Group not found." });
+    }
+
+    const groupData = groupDoc.data();
+
+    await db
+      .collection("Groups")
+      .doc(groupId)
+      .collection("members")
+      .doc(userId)
+      .set({
+        joinedAt: admin.firestore.FieldValue.serverTimestamp(),
+        isCreator: false
+      });
+
+    await db
+      .collection("users")
+      .doc(userId)
+      .collection("groups")
+      .doc(groupId)
+      .set({
+        groupId,
+        name: groupData.name || null,
+        joinedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+    res.status(200).json({ message: "Successfully joined group." });
+  } catch (error) {
+    console.error("Error joining group:", error);
+    res.status(500).json({ error: "Failed to join group." });
   }
 });
 
