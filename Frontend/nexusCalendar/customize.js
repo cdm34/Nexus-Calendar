@@ -1,183 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Settings - Nexus Calendar</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="customize.css">
+</head>
+<body>
+  <header>
+    <h1>nexus calendar</h1>
+    <h2>settings</h2>
+    <div class="settings-container">
+      <button id="back-btn" class="settings-btn">
+        <img src="settingsBCK.png" class="settings-icon" alt="Back"> Back
+      </button>
+    </div>
+  </header>
 
-// DOM Elements
-const backBtn = document.getElementById('back-btn');
-const colorOptions = document.querySelectorAll('.color-option');
-const fontOptions = document.querySelectorAll('.font-option');
-const viewOptions = document.querySelectorAll('.view-option');
+  <div class="customize-container">
+    
+    <div class="customize-section">
+      <h3>Account</h3>
+<div id="user-info" style="margin: 10px; font-size: 12px;">
+      <p><strong>User ID:</strong> <code id="user-id-display">Loading...</code></p>
 
-// Color themes
-const colorThemes = [
-  { primary: '#f5f5f0', secondary: '#f0f0f0', text: '#333', bodyBg: '#f5f5f0', name: 'Default' },
-  { primary: '#e74c3c', secondary: '#f9e7e7', text: '#444', bodyBg: '#f5f5f0', name: 'Red' },
-  { primary: '#2ecc71', secondary: '#e8f5e8', text: '#333', bodyBg: '#f5f5f0', name: 'Green' },
-  { primary: '#9b59b6', secondary: '#f4e8f9', text: '#444', bodyBg: '#f5f5f0', name: 'Purple' },
-  { primary: '#f39c12', secondary: '#fef5e7', text: '#333', bodyBg: '#f5f5f0', name: 'Orange' },
-  { primary: '#2c3e50', secondary: '#2c3e50', text: '#ffffff', bodyBg: '#000000', name: 'Night Mode' }
-];
+</div>
+      <input type="text" id="display-name-input" placeholder="Enter your display name" style="padding: 8px; width: 100%; max-width: 300px;">
 
-const fontFamilies = [
-  '"Jost", sans-serif',
-  'Arial, sans-serif',
-  'Courier New, monospace',
-  'Times New Roman, serif',
-];
 
-// Load current settings from localStorage
-let currentTheme = parseInt(localStorage.getItem('nexusCalendar_theme') || 0);
-let currentFont = parseInt(localStorage.getItem('nexusCalendar_font') || 0);
-let currentView = localStorage.getItem('nexusCalendar_view') || 'month';
+      <br>       <br>
 
-// Initialize the page
-function initCustomizePage() {
-  applyTheme(currentTheme);
-  document.body.style.fontFamily = fontFamilies[currentFont];
-  updateSelectedOptions();
-}
 
-// Function to update selected options
-function updateSelectedOptions() {
-  // Update color options
-  colorOptions.forEach(option => {
-    const themeIndex = parseInt(option.dataset.theme);
-    if (themeIndex === currentTheme) {
-      option.classList.add('selected');
-    } else {
-      option.classList.remove('selected');
-    }
-  });
+      <button class="control-btn" id="link-google-btn">Link Google Account</button>
+      <br>       <br>
 
-  // Update font options
-  fontOptions.forEach(option => {
-    const fontIndex = parseInt(option.dataset.font);
-    if (fontIndex === currentFont) {
-      option.classList.add('selected');
-    } else {
-      option.classList.remove('selected');
-    }
-  });
+      <button class="control-btn" id="pull-google-btn">Pull Events From Google</button>
+      <br>       <br>
 
-  // Update view options
-  viewOptions.forEach(option => {
-    const view = option.dataset.view;
-    if (view === currentView) {
-      option.classList.add('selected');
-    } else {
-      option.classList.remove('selected');
-    }
-  });
-}
 
-// Function to apply theme
-function applyTheme(themeIndex) {
-  const theme = colorThemes[themeIndex];
-  document.documentElement.style.setProperty('--primary-color', theme.primary);
-  document.documentElement.style.setProperty('--secondary-color', theme.secondary);
-  document.documentElement.style.setProperty('--text-color', theme.text);
-  document.body.style.backgroundColor = theme.bodyBg;
-  
-  // Update theme option highlighting
-  colorOptions.forEach(option => {
-    const optionThemeIndex = parseInt(option.dataset.theme);
-    if (optionThemeIndex === themeIndex) {
-      option.classList.add('selected');
-    } else {
-      option.classList.remove('selected');
-    }
-  });
-}
+<input type="file" id="import-ics" accept=".ics" />
 
-function setTheme(themeIndex) {
-  currentTheme = themeIndex;
-  applyTheme(themeIndex);
-  
-  // Save to localStorage
-  localStorage.setItem('nexusCalendar_theme', themeIndex);
-}
+      <button id="import-btn">Import ICS File</button>
+<br>
 
-function setFont(fontIndex) {
-  currentFont = fontIndex;
-  document.body.style.fontFamily = fontFamilies[fontIndex];
-  
-  // Save to localStorage
-  localStorage.setItem('nexusCalendar_font', fontIndex);
-}
 
-function setView(view) {
-  currentView = view;
-  
-  // Save to localStorage
-  localStorage.setItem('nexusCalendar_view', view);
-}
+      <div id="name-save-status" style="color: green; margin-top: 5px;"></div>
 
-// Initialize the page on load
-initCustomizePage();
 
-// Event Listeners
-if (backBtn) {
-  backBtn.addEventListener('click', () => {
-    window.location.href = 'index.html';
-  });
-}
+    </div>
 
-colorOptions.forEach(option => {
-  option.addEventListener('click', () => {
-    const themeIndex = parseInt(option.dataset.theme);
-    setTheme(themeIndex);
-    updateSelectedOptions();
-  });
-});
+    <div class="customize-section">
+  <h3>Appearance</h3>
 
-fontOptions.forEach(option => {
-  option.addEventListener('click', () => {
-    const fontIndex = parseInt(option.dataset.font);
-    setFont(fontIndex);
-    updateSelectedOptions();
-  });
-});
+  <label for="custom-primary">Primary Color:</label>
+    <input type="color" id="custom-primary" value="#6799b2">
 
-viewOptions.forEach(option => {
-  option.addEventListener('click', () => {
-    const view = option.dataset.view;
-    setView(view);
-    updateSelectedOptions();
-  });
-});
+  <p style="margin-top: 15px;">Font:</p>
+  <div class="font-options">
+    <div class="font-option" data-font="0">Jost (Default)</div>
+    <div class="font-option" data-font="1">Arial</div>
+    <div class="font-option" data-font="2">Courier New</div>
+    <div class="font-option" data-font="3">Times New Roman</div>
+  </div>
+</div>
 
-// Google Account Authorization
-function authorizeGoogle() {
-  window.location.href = 'http://localhost:3001/';
-}
 
-async function loadGoogleEvents() {
-  const userId = localStorage.getItem('nexusUserId');
-  if (!userId) {
-    alert("Please log in to Nexus Calendar first.");
-    window.location.href = './log in/login.html';
-    return;
-  }
+    <div class="customize-section">
+      <h3>Appearance</h3>
+      <button class="control-btn" id="theme-toggle">Toggle Theme</button>
+      <button class="control-btn" id="font-toggle">Toggle Font</button>
+      <br>      <br>
 
-  try {
-    const response = await fetch(`http://localhost:3001/sync-events?userId=${userId}`);
-    if (response.ok) {
-      alert("Google events synced! Loading...");
-    } else {
-      const data = await response.json();
-      alert(data.message || "Failed to sync events");
-    }
-  } catch (err) {
-    console.error("Error syncing events:", err);
-    alert("Something went wrong.");
-  }
-}
 
-// Button Event Listeners
-const linkGoogleBtn = document.getElementById('link-google-btn');
-const pullGoogleBtn = document.getElementById('pull-google-btn');
+      <button class="control-btn" id="logout-btn">Log Out</button>
 
-if (linkGoogleBtn) {
-  linkGoogleBtn.addEventListener('click', authorizeGoogle);
-}
+    </div>
+  </div>
 
-if (pullGoogleBtn) {
-  pullGoogleBtn.addEventListener('click', loadGoogleEvents);
-}
+
+
+  <script src="customize.js"></script>
+
+
+</body>
+
+</html>
