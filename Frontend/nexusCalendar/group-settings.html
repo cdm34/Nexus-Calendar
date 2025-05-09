@@ -1,4 +1,3 @@
-<html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -41,6 +40,10 @@
     #group-form, #group-details {
       display: none;
     }
+
+    .group-item {
+      margin: 5px 0;
+    }
   </style>
 </head>
 
@@ -51,47 +54,37 @@
 
     <section>
       <p><strong>User ID:</strong> <code id="user-id-display">Loading...</code></p>
+
+  <div>
+        <label>Join Group by ID:
+          <input type="text" id="join-group-id" placeholder="Enter group ID" />
+          <button id="join-group-btn">Join</button>
+        </label>
+      </div>
+
       <label>Joined Groups:
         <select id="group-selector">
           <option selected disabled>None</option>
         </select>
       </label><br>
 
-      </label>
-
       <button id="create-group-toggle">Create New Group</button>
-      <div id="group-form">
-      </div>
-    </section>
+      <div id="group-form"></div>
 
+    
+    </section>
 
     <div id="group-details">
       <section>
         <h2>Group Info</h2>
         <label>Group Name: <input type="text" id="group-name" placeholder="Enter group name" /></label><br><br>
-
         <label>Group Color: <input type="color" id="group-color" value="#6799b2" /></label><br>
       </section>
 
       <section>
         <h2>Members</h2>
         <ul id="member-list"></ul>
-        <label>Invite By Email: <input type="email" placeholder="Email address" /> <button>Send Invite</button></label>
-        </label><br>
-
-        <label>Invite By User ID: <input type="email" placeholder="User ID" /> <button>Send Invite</button></label>
-      </section>
-
-      <section>
-        <h2>Notifications</h2>
-        <label><input type="checkbox" /> Enable reminders</label><br>
-        <label>Default reminder:
-          <select>
-            <option>5 mins before</option>
-            <option selected>15 mins before</option>
-            <option>30 mins before</option>
-          </select>
-        </label>
+        <label>Invite By User ID: <input type="text" id="invite-ids" placeholder="Comma-separated IDs" /></label>
       </section>
 
       <section>
@@ -105,16 +98,16 @@
         </label><br>
         <label>Time Zone: <input type="text" placeholder="e.g., CST" /></label>
       </section>
-    <button id="submit-group">Submit Group</button>
+      <button id="submit-group">Submit Group</button>
 
-
+      <div id="user-groups-list"></div>
     </div>
   </div>
 
   <script>
-     const display = document.getElementById('user-id-display');
-  const userId = localStorage.getItem('nexusUserId');
-  display.textContent = userId || 'Not logged in';
+    const display = document.getElementById('user-id-display');
+    const userId = localStorage.getItem('nexusUserId');
+    display.textContent = userId || 'Not logged in';
 
     document.getElementById('back-btn').addEventListener('click', () => {
       window.location.href = 'index.html';
@@ -148,7 +141,17 @@
 
       if (response.ok) {
         alert(`Group "${groupName}" created!`);
+
+        const memberList = document.getElementById('member-list');
+        memberList.innerHTML = '';  // Clear previous
+        const li = document.createElement('li');
+        li.textContent = `${localStorage.getItem('nexusName') || 'You'} (admin)`;
+        memberList.appendChild(li);
+
+
         const groupId = data.groupId;
+        await loadGroupMembers(groupId);
+
         const inviteIds = inviteIdsRaw.split(',').map(id => id.trim()).filter(Boolean);
 
         for (const receiverId of inviteIds) {
@@ -164,7 +167,128 @@
         alert(`Error: ${data.error}`);
       }
     });
+
+   async function loadUserGroups() {
+  const userId = localStorage.getItem("nexusUserId");
+  if (!userId) return alert("Not logged in.");
+
+  try {
+    const response = await fetch(`http://localhost:3001/users/${userId}/groups`);
+    const result = await response.json();
+
+    const selector = document.getElementById("group-selector");
+    selector.innerHTML = '<option selected disabled>None</option>';
+
+    result.groups.forEach(group => {
+      const option = document.createElement("option");
+      option.value = group.groupId;
+      option.textContent = group.name;
+      selector.appendChild(option);
+    });
+  } catch (err) {
+    console.error("Error loading groups:", err);
+    alert("Failed to fetch groups.");
+  }
+}
+
+
+    async function createGroup() {
+      const groupName = prompt("Enter group name:");
+      const creatorId = localStorage.getItem("nexusUserId");
+      if (!groupName || !creatorId) return;
+
+      try {
+        const response = await fetch("http://localhost:3001/create-group", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ groupName, creatorId })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          alert("Group created!");
+          loadUserGroups();
+        } else {
+          alert(data.error || "Could not create group.");
+        }
+      } catch (err) {
+        console.error("Error creating group:", err);
+        alert("Error.");
+      }
+    }
+
+  document.getElementById('join-group-btn').addEventListener('click', async () => {
+      const groupId = document.getElementById('join-group-id').value;
+      const userId = localStorage.getItem('nexusUserId');
+
+      if (!groupId || !userId) return alert("Missing info");
+
+      try {
+        const res = await fetch('http://localhost:3001/accept-invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, groupId })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert("Joined group!");
+          loadUserGroups();
+        } else {
+          alert(data.error || "Failed to join group");
+        }
+      } catch (err) {
+        console.error("Join group error:", err);
+        alert("Join failed.");
+      }
+    });
+  async function loadGroupMembers(groupId) {
+  const list = document.getElementById('member-list');
+  list.innerHTML = '';
+
+  try {
+    const membersSnapshot = await fetch(`http://localhost:3001/groups/${groupId}/members`);
+    const membersData = await membersSnapshot.json();
+
+    if (!Array.isArray(membersData.members)) {
+      list.innerHTML = '<li>No members found.</li>';
+      return;
+    }
+
+    membersData.members.forEach(member => {
+      const li = document.createElement('li');
+      const name = member.name || member.userId || 'Unknown';
+
+      li.textContent = `${name}${member.isCreator ? ' (admin)' : ''}`;
+      list.appendChild(li);
+    });
+
+  } catch (err) {
+    console.error("Failed to load members:", err);
+    list.innerHTML = '<li>Error loading members</li>';
+  }
+}
+
+document.getElementById('group-selector').addEventListener('change', async (e) => {
+  const groupId = e.target.value;
+  const details = document.getElementById('group-details');
+  details.style.display = 'block';
+
+  // Load group name and color
+  try {
+    const res = await fetch(`http://localhost:3001/groups/${groupId}`);
+    const groupData = await res.json();
+
+    document.getElementById('group-name').value = groupData.name || '';
+    document.getElementById('group-color').value = groupData.color || '#6799b2';
+  } catch (err) {
+    console.error("Failed to fetch group info:", err);
+  }
+
+  await loadGroupMembers(groupId);
+});
+
+   loadUserGroups();
   </script>
 </body>
 </html>
-
