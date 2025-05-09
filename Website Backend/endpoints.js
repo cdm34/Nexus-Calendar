@@ -304,26 +304,48 @@ app.post('/decline-invite', async (req, res) => {
 });
 
 app.post('/events', async (req, res) => {
-    try {
-        const { userId, event } = req.body;
+  try {
+    const { userId, event } = req.body;
 
-        if (!userId || !event) {
-            return res.status(400).json({ error: "userId and event are required." });
-        }
-
-        const ref = db.collection("users")
-                      .doc(userId)
-                      .collection("calendars")
-                      .doc("google")
-                      .collection("events");
-
-        const docRef = await ref.add(event);
-
-        res.status(201).json({ message: "Event created", eventId: docRef.id });
-    } catch (error) {
-        console.error("Error saving event:", error);
-        res.status(500).json({ error: "Internal server error" });
+    if (!userId || !event) {
+      return res.status(400).json({ error: "userId and event are required." });
     }
+
+    //  user's personal calendar
+    const userEventRef = db.collection("users")
+      .doc(userId)
+      .collection("calendars")
+      .doc("google")
+      .collection("events");
+
+    const docRef = await userEventRef.add(event);
+
+    // If shared with a group, also add to group calendar
+    if (event.groupId) {
+      const membersSnapshot = await db.collection("Groups")
+        .doc(event.groupId)
+        .collection("members")
+        .get();
+
+      const memberAddPromises = membersSnapshot.docs.map(memberDoc => {
+        const memberId = memberDoc.id;
+        return db.collection("users")
+          .doc(memberId)
+          .collection("calendars")
+          .doc("google")
+          .collection("events")
+          .doc(docRef.id) // use the same event ID
+          .set({ ...event, isEditable: memberId === userId });
+      });
+
+      await Promise.all(memberAddPromises);
+    }
+
+    res.status(201).json({ message: "Event created", eventId: docRef.id });
+  } catch (error) {
+    console.error("Error saving event:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 app.delete('/events/:userId/:eventId', async (req, res) => {
@@ -644,6 +666,30 @@ app.post('/add-to-group', async (req, res) => {
   } catch (error) {
     console.error("Error adding user directly:", error);
     res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+app.get('/groups/:groupId/events', async (req, res) => {
+  const { groupId } = req.params;
+
+  if (!groupId) {
+    return res.status(400).json({ error: "Group ID is required." });
+  }
+
+  try {
+    const eventsRef = db.collectionGroup("events").where("groupId", "==", groupId);
+    const snapshot = await eventsRef.get();
+
+    if (snapshot.empty) {
+      return res.status(200).json({ events: [] });
+    }
+
+    const events = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.status(200).json({ events });
+
+  } catch (error) {
+    console.error("Error fetching group events:", error);
+    res.status(500).json({ error: "Failed to fetch group events" });
   }
 });
 
