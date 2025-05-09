@@ -1,45 +1,145 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event List</title>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            fetch("/data")
-                .then(response => response.json())
-                .then(data => {
-                    const container = document.getElementById("event-container");
-
-                    if (data.error) {
-                        container.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
-                        return;
-                    }
-
-                    let html = "<h2>Event List</h2><ul>";
-                    data.forEach(event => {
-                        html += `
-                            <li>
-                                <strong>${event.title}</strong><br>
-                                <em>${event.start_time} - ${event.end_time}</em><br>
-                                Location: ${event.location}<br>
-                                Description: ${event.description}<br><br>
-                            </li>
-                        `;
-                    });
-                    html += "</ul>";
-
-                    container.innerHTML = html;
-                })
-                .catch(error => {
-                    document.getElementById("event-container").innerHTML = `<p style="color: red;">Error loading events</p>`;
-                    console.error("Error fetching event data:", error);
-                });
-        });
-    </script>
+    <title> Nexus Calendar</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>My Events</h1>
-    <div id="event-container">Loading events...</div>
+  <header>
+    <h1> nexus calendar</h1>
+    <h2> 2025</h2>
+	
+    <div class="view-buttons">
+      <button id="prev-month" class="nav-btn">&lt;</button>
+      <button id="view-month" class="view-btn active" data-view="month">month</button>
+      <button id="view-day" class="view-btn" data-view="day">1 day</button>
+      <button id="view-three-day" class="view-btn" data-view="three-day">3 day</button>
+      <button id="next-month" class="nav-btn">&gt;</button>
+    </div>
+<label for="calendar-toggle">View:</label>
+<select id="calendar-toggle">
+  <option value="personal">My Calendar</option>
+  <option value="all">All Calendars</option>
+</select>
+
+
+
+    <div class="settings-container">
+      <button id="settings-btn" class="settings-btn"><img src="settingsBCK.png" alt="Settings" class="settings-icon"></button>
+      <div class="control-panel" id="control-panel">
+        <div class="control-group">
+          <button id="color-theme" class="control-btn">Night Mode</button>
+          <button id="settings-change" class="nav-btn">Settings</button>
+          <button id="group-settings" class="control-btn">Group Settings</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+
+
+  <div class="calendar">
+    <div class="weekdays">
+      <div> sun</div>
+      <div> mon</div>
+      <div> tue</div>
+      <div> wed</div>
+      <div> thu</div>
+      <div> fri</div>
+      <div> sat</div>
+    </div>
+    <div class="days">
+      <div> 1</div>
+      <div> 2</div>
+      <div> 3</div>
+      <div> 4</div>
+      <div> 5</div>
+      <div> 6</div>
+      <div> 7</div>
+      <div> 8</div>
+      <div> 9</div>
+      <div> 10</div>
+      <div> 11</div>
+      <div> 12</div>
+      <div> 13</div>
+      <div> 14</div>
+      <div> 15</div>
+      <div> 16</div>
+      <div> 17</div>
+      <div> 18</div>
+      <div> 19</div>
+      <div> 20</div>
+      <div> 21</div>
+      <div> 22</div>
+      <div> 23</div>
+      <div> 24</div>
+      <div> 25</div>
+      <div> 26</div>
+      <div> 27</div>
+      <div> 28</div>
+      <div> 29</div>
+      <div> 30</div>
+      <div> 31</div>
+    </div>
+  </div>
+
+<div id="user-info" style="margin: 10px; font-size: 12px;">
+  Logged in as: <code id="user-id-display">Loading...</code>
+</div>
+
+  <!-- Notes Tab and Panel -->
+  <div class="notes-tab" id="notes-tab">Notes</div>
+  <div class="notes-panel" id="notes-panel">
+    <div class="notes-header">
+      <h3>Notes</h3>
+      <button class="close-notes" id="close-notes">&times;</button>
+    </div>
+    <div class="notes-content">
+      <div class="notes-attribution" id="notes-attribution">
+        <div class="notes-info"></div>
+        <div class="notes-actions">
+          <button class="delete-note user" id="delete-note-user">Delete for Me</button>
+          <button class="delete-note everyone" id="delete-note-everyone">Delete for Everyone</button>
+        </div>
+      </div>
+      <textarea class="notes-textarea" id="notes-textarea" placeholder="Write your notes here..."></textarea>
+      <button class="save-notes" id="save-notes">Save Notes</button>
+      <div id="notes-save-status" style="margin-top: 8px; color: green; font-size: 14px;"></div>
+
+      <div class="paint-container" style="margin-top: 20px;">
+        <h4>Draw Notes</h4>
+        <canvas id="paintCanvas" width="600" height="300" style="border: 1px solid #333; background: white;"></canvas>
+        <div style="margin-top: 10px;">
+          <button onclick="clearCanvas()">Clear</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Event Maker Modal -->
+  <div id="event-maker" class="event-maker" style="display: none;">
+    <h3>Create Event</h3>
+    <form class="event-form" id="event-form">
+      <input type="text" id="event-title" placeholder="Event Title" required>
+      <input type="date" id="event-date" required>
+      <input type="time" id="event-start" required>
+      <input type="time" id="event-end" required>
+      <div class="event-color">
+        <label>Color:</label>
+        <input type="color" id="event-color" class="color-picker" value="#6799b2">
+      </div>
+<label for="event-group">Share with Group:</label>
+<select id="event-group">
+  <option value="">None</option>
+</select>
+      <div class="event-actions">
+        <button id="delete-event-btn" style="background-color: red; color: white;">Delete</button>
+        <button type="button" class="cancel-event" id="cancel-event">Cancel</button>
+        <button type="submit" class="save-event">Save</button>
+      </div>
+    </form>
+  </div>
+  <script src="script.js"></script>
 </body>
 </html>
