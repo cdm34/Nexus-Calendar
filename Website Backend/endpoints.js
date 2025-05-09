@@ -277,7 +277,7 @@ app.post('/accept-invite', async (req, res) => {
 
 app.post('/decline-invite', async (req, res) => {
     try {
-        const { userId, groupId } = req.params;
+        const { userId, groupId } = req.body;
 
         if (!userId || !groupId) {
             return res.status(400).json({ error: "userId and groupId are required." });
@@ -610,6 +610,43 @@ app.post('/join-group', async (req, res) => {
     res.status(500).json({ error: "Failed to join group." });
   }
 });
+
+//testing add
+app.post('/add-to-group', async (req, res) => {
+  try {
+    const { groupId, adderId, targetUserId } = req.body;
+
+    if (!groupId || !adderId || !targetUserId) {
+      return res.status(400).json({ error: "groupId, adderId, and targetUserId are required." });
+    }
+
+    const groupDoc = await db.collection("Groups").doc(groupId).get();
+    if (!groupDoc.exists) {
+      return res.status(404).json({ error: "Group not found." });
+    }
+
+    const groupData = groupDoc.data();
+
+    // Add user to group members
+    await db.collection("Groups").doc(groupId).collection("members").doc(targetUserId).set({
+      joinedAt: admin.firestore.FieldValue.serverTimestamp(),
+      isCreator: false
+    });
+
+    // Add group to user's groups list
+    await db.collection("users").doc(targetUserId).collection("groups").doc(groupId).set({
+      groupId,
+      name: groupData.name || null,
+      joinedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    res.status(200).json({ message: "User added to group directly." });
+  } catch (error) {
+    console.error("Error adding user directly:", error);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
 
 
 
