@@ -4,6 +4,8 @@ const admin = require('firebase-admin');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors'); // You also need this if it's missing
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const fs = require('fs');
+const { google } = require('googleapis');
 
 
 const app = express(); 
@@ -16,6 +18,85 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
+
+// Google OAuth setup
+const credentials = JSON.parse(
+fs.readFileSync('client_secret_163745154776-a7rnimll4ohaov0bc5q3peotqnbqkk50.apps.googleusercontent.com.json')
+);
+const { client_id, client_secret, redirect_uris } = credentials.web;
+const oauth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[2]);
+
+// OAuth flow route
+app.get('/', (req, res) => {
+    const url = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: 'https://www.googleapis.com/auth/calendar.readonly'
+    });
+    res.redirect(url);
+});
+
+app.get('/redirect', (req, res) => {
+    const code = req.query.code;
+    if (!code) return res.status(400).send('Missing code parameter');
+
+    oauth2Client.getToken(code, (err, tokens) => {
+        if (err) {
+        console.error('Token exchange error:', err.response?.data || err);
+        return res.status(500).send('Token error');
+        }
+        oauth2Client.setCredentials(tokens);
+        fs.writeFileSync('token.json', JSON.stringify(tokens));
+        res.redirect('http://localhost:5500/index.html?synced=true');
+    });
+});
+
+app.get('/sync-events', async (req, res) => {
+    try {
+      const calendarId = req.query.calendar ?? 'primary';
+      const userId = req.query.userId;          // nexusUserId coming from the client
+  
+      console.log(userId)
+
+      if (!userId) {
+        return res.status(400).json({ error: 'Missing userId query parameter.' });
+      }
+  
+      // Make sure oauth2Client already has valid credentials (step 1 above)
+      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+  
+      // Pull the next 15 upcoming events
+      const gRes = await calendar.events.list({
+        calendarId,
+        timeMin: new Date().toISOString(),
+        maxResults: 15,
+        singleEvents: true,
+        orderBy: 'startTime'
+      });
+  
+      const events = gRes.data.items;
+      const batch  = db.batch();
+  
+      // Store each event in Firestore
+      events.forEach(event => {
+        const eventRef = db.collection(`users/${userId}/calendars/google/events`).doc(event.id);
+        batch.set(eventRef, {
+          title: event.summary,
+          startTime: event.start.dateTime || event.start.date,
+          endTime: event.end.dateTime || event.end.date,
+          description: event.description || "",
+          location: event.location || "",
+          calendarType: "Google"
+        });
+      });
+  
+      await batch.commit();
+      res.status(200).json({ message: 'Events synced to Firestore', events });
+    } catch (err) {
+      console.error('Error syncing events:', err);
+      res.status(500).json({ error: 'Failed to sync events.' });
+    }
+  });
+  
 
 app.post('/register', async (req, res) => {
     try {
@@ -343,7 +424,6 @@ app.delete('/events/:userId/:eventId', async (req, res) => {
       .doc(eventId);
 
     await eventRef.delete();
-console.log(`Deleted event ${eventId} for user ${userId}`); 
 
     res.status(200).json({ message: 'Event deleted successfully' });
   } catch (error) {
@@ -377,38 +457,6 @@ app.put('/events/:userId/:eventId', async (req, res) => {
     res.status(500).json({ error: "Failed to update event." });
   }
 });
-
-const router = express.Router();
-
-app.get('/redirect', async (req, res) => {
-  const code = req.query.code;
-
-  const body = {
-    code,
-    client_id: "secre-code-here-cantcommit ik ik gotta read it in but was testing",
-    client_secret: "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",
-    redirect_uri: "http://localhost:5500/redirect",
-    grant_type: "authorization_code"
-  };
-
-  try {
-    const response = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-
-    const data = await response.json();
-    console.log("Token response:", data);
-
-    // Save to Firestore if needed
-     res.redirect("http://localhost:5500/customization.html?linked=true");
-  } catch (err) {
-    console.error("Token exchange failed:", err);
-    res.status(500).send("OAuth failed");
-  }
-});
-
 
 
 
