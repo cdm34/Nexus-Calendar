@@ -275,7 +275,6 @@ if (currentView === 'day') {
         break;
       default:
         renderMonthView();
-        renderEvents;
         break;
     }
 
