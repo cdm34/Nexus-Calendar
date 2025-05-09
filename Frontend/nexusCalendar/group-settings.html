@@ -84,7 +84,11 @@
       <section>
         <h2>Members</h2>
         <ul id="member-list"></ul>
-        <label>Invite By User ID: <input type="text" id="invite-ids" placeholder="Comma-separated IDs" /></label>
+        <label>Invite By User ID:
+  <input type="text" id="invite-user-id" placeholder="User ID" />
+  <button id="invite-user-btn">Send Invite</button>
+</label>
+
       </section>
 
       <section>
@@ -271,22 +275,72 @@
 
 document.getElementById('group-selector').addEventListener('change', async (e) => {
   const groupId = e.target.value;
-  const details = document.getElementById('group-details');
-  details.style.display = 'block';
+  const selectedOption = e.target.options[e.target.selectedIndex];
+  const groupName = selectedOption.textContent;
 
-  // Load group name and color
-  try {
-    const res = await fetch(`http://localhost:3001/groups/${groupId}`);
-    const groupData = await res.json();
+  document.getElementById('group-details').style.display = 'block';
 
-    document.getElementById('group-name').value = groupData.name || '';
-    document.getElementById('group-color').value = groupData.color || '#6799b2';
-  } catch (err) {
-    console.error("Failed to fetch group info:", err);
+  const nameInput = document.getElementById('group-name');
+  nameInput.value = groupName;
+  nameInput.disabled = false;
+
+  document.getElementById('submit-group').style.display = 'none';
+  if (!document.getElementById('save-group')) {
+    const saveBtn = document.createElement('button');
+    saveBtn.id = 'save-group';
+    saveBtn.textContent = 'Save Changes';
+    saveBtn.addEventListener('click', async () => {
+      const updatedName = document.getElementById('group-name').value;
+      const updatedColor = document.getElementById('group-color').value;
+      const userId = localStorage.getItem("nexusUserId");
+
+      await fetch(`http://localhost:3001/groups/${groupId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: updatedName, color: updatedColor, userId })
+      });
+
+      alert('Group updated!');
+      await loadUserGroups();
+    });
+    document.getElementById('group-details').appendChild(saveBtn);
   }
 
   await loadGroupMembers(groupId);
 });
+
+document.getElementById('invite-user-btn').addEventListener('click', async () => {
+  const groupId = document.getElementById('group-selector').value;
+  const adderId = localStorage.getItem('nexusUserId');
+  const targetUserId = document.getElementById('invite-user-id').value.trim();
+
+  if (!groupId || !adderId || !targetUserId) {
+    alert("Missing group or user ID.");
+    return;
+  }
+
+  try {
+    const res = await fetch('http://localhost:3001/add-to-group', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupId, adderId, targetUserId })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      alert("User added to group.");
+      await loadGroupMembers(groupId);
+      document.getElementById('invite-user-id').value = '';
+    } else {
+      alert(data.error || "Failed to add user.");
+    }
+  } catch (err) {
+    console.error("Add user error:", err);
+    alert("Error adding user.");
+  }
+});
+
 
    loadUserGroups();
   </script>
