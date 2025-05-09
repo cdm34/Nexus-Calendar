@@ -4,11 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const colorThemes = [
     { primary: '#f5f5f0', secondary: '#f0f0f0', text: '#333', bodyBg: '#f5f5f0', name: 'Default' },
-    { primary: '#e74c3c', secondary: '#f9e7e7', text: '#444', bodyBg: '#f5f5f0', name: 'Red' },
-    { primary: '#2ecc71', secondary: '#e8f5e8', text: '#333', bodyBg: '#f5f5f0', name: 'Green' },
-    { primary: '#9b59b6', secondary: '#f4e8f9', text: '#444', bodyBg: '#f5f5f0', name: 'Purple' },
-    { primary: '#f39c12', secondary: '#fef5e7', text: '#333', bodyBg: '#f5f5f0', name: 'Orange' },
-    { primary: '#2c3e50', secondary: '#2c3e50', text: '#ffffff', bodyBg: '#000000', name: 'Night Mode' }
+    { primary: '#2c3e50', secondary: '#2c3e50', text: 'white', bodyBg: '#000000', name: 'Night Mode' }
   ];
   const fontFamilies = [
   '"Jost", sans-serif',     // Default
@@ -266,6 +262,9 @@ if (currentView === 'day') {
       currentView = 'month';
       localStorage.setItem('nexusCalendar_view', 'month');
     }
+    populateGroupDropdown();
+    populateCalendarToggle();
+
 
     switch (currentView) {
       case 'day':
@@ -279,6 +278,24 @@ if (currentView === 'day') {
         renderEvents;
         break;
     }
+
+document.getElementById('calendar-toggle').addEventListener('change', () => {
+  const selected = document.getElementById('calendar-toggle').value;
+  localStorage.setItem('nexusCalendar_selectedView', selected);
+
+  switch (currentView) {
+    case 'day':
+      renderDayView(currentDay);
+      break;
+    case 'three-day':
+      renderThreeDayView(currentDay);
+      break;
+    default:
+      renderMonthView();
+      break;
+  }
+});
+
 
   }
 
@@ -368,7 +385,38 @@ function renderThreeDayView(startDay) {
 
 
 async function renderEventsForThreeDays(startDay) {
+const selectedView = localStorage.getItem('nexusCalendar_selectedView') || 'personal';
+
+let allEvents = [];
+
+if (selectedView === 'personal') {
   const res = await fetch(`http://localhost:3001/events?userId=${userId}&month=${currentMonth + 1}&year=${currentYear}`);
+  const data = await res.json();
+  if (Array.isArray(data.events)) allEvents = data.events;
+} else if (selectedView === 'all') {
+  // Get personal events
+  const personalRes = await fetch(`http://localhost:3001/events?userId=${userId}&month=${currentMonth + 1}&year=${currentYear}`);
+  const personalData = await personalRes.json();
+  if (Array.isArray(personalData.events)) allEvents = allEvents.concat(personalData.events);
+
+  // Get group events
+  const groupRes = await fetch(`http://localhost:3001/users/${userId}/groups`);
+  const groupData = await groupRes.json();
+  if (Array.isArray(groupData.groups)) {
+    for (const group of groupData.groups) {
+      const res = await fetch(`http://localhost:3001/groups/${group.groupId}/events?month=${currentMonth + 1}&year=${currentYear}`);
+      const groupEventsData = await res.json();
+      if (Array.isArray(groupEventsData.events)) {
+        allEvents = allEvents.concat(groupEventsData.events);
+      }
+    }
+  }
+} else {
+  // Specific group
+  const res = await fetch(`http://localhost:3001/groups/${selectedView}/events?month=${currentMonth + 1}&year=${currentYear}`);
+  const data = await res.json();
+  if (Array.isArray(data.events)) allEvents = data.events;
+}
   const data = await res.json();
   if (!Array.isArray(data.events)) return;
 
@@ -705,6 +753,155 @@ function showEventMaker(dateString) {
     document.getElementById('event-end').value = '';
   }
 }
+
+async function populateGroupDropdown() {
+  const userId = localStorage.getItem('nexusUserId');
+  const groupSelect = document.getElementById('event-group');
+  if (!groupSelect) return;
+  groupSelect.innerHTML = '<option value="">None</option>';
+
+  try {
+    const res = await fetch(`http://localhost:3001/users/${userId}/groups`);
+    const data = await res.json();
+
+    if (Array.isArray(data.groups)) {
+      data.groups.forEach(group => {
+        const option = document.createElement('option');
+        option.value = group.groupId;
+        option.textContent = group.name;
+        option.dataset.color = group.color || '#6799b2';
+        groupSelect.appendChild(option);
+      });
+    }
+  } catch (err) {
+    console.error("Error loading groups:", err);
+  }
+}
+
+document.getElementById('event-group').addEventListener('change', function () {
+  const selected = this.options[this.selectedIndex];
+  const color = selected.dataset.color || '#6799b2';
+  const name = selected.textContent;
+  document.getElementById('event-color').value = color;
+  this.dataset.groupName = name;
+});
+
+async function createEvent(event) {
+  event.preventDefault();
+
+  const title = document.getElementById('event-title').value;
+  const date = document.getElementById('event-date').value;
+  const start = document.getElementById('event-start').value;
+  const end = document.getElementById('event-end').value;
+  const color = document.getElementById('event-color').value;
+  const userId = localStorage.getItem('nexusUserId');
+  const editingId = document.getElementById('event-maker').dataset.editing;
+
+  const groupDropdown = document.getElementById('event-group');
+const selectedOption = groupDropdown.options[groupDropdown.selectedIndex];
+const selectedGroupId = selectedOption.value || null;
+const selectedGroupName = selectedOption.textContent || '';
+const selectedGroupColor = selectedOption.dataset.color || '#6799b2';
+  const creatorName = localStorage.getItem('nexusName') || '';
+
+  const eventData = {
+    title,
+    startTime: `${date}T${start}`,
+    endTime: `${date}T${end}`,
+    color: selectedGroupId ? selectedGroupColor : color,
+    date,
+    creator: userId,
+    creatorName: creatorName || '',
+    isEditable: true,
+    groupId: selectedGroupId,
+    groupName: selectedGroupId ? selectedGroupName : ''
+};
+
+  const url = editingId
+    ? `http://localhost:3001/events/${userId}/${editingId}`
+    : 'http://localhost:3001/events';
+
+  const method = editingId ? 'PUT' : 'POST';
+  const body = editingId
+    ? JSON.stringify(eventData)
+    : JSON.stringify({ userId, event: eventData });
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      if (!editingId && data.eventId) {
+        document.getElementById('event-maker').dataset.editing = data.eventId;
+      }
+    } else {
+      alert(`Error: ${data.error}`);
+    }
+  } catch (err) {
+    console.error('Network error saving event:', err);
+    alert('Network error saving event.');
+  }
+
+  document.getElementById('event-maker').style.display = 'none';
+  document.getElementById('event-maker').dataset.editing = '';
+  switch (currentView) {
+    case 'day':
+      renderDayView(currentDay);
+      break;
+    case 'three-day':
+      renderThreeDayView(currentDay);
+      break;
+    default:
+      renderMonthView();
+      break;
+  }
+}
+
+async function fetchUserGroups(userId) {
+  const res = await fetch(`http://localhost:3001/users/${userId}/groups`);
+  const data = await res.json();
+  if (res.ok && Array.isArray(data.groups)) {
+    localStorage.setItem('nexusGroupList', JSON.stringify(data.groups));
+    return data.groups;
+  } else {
+    console.error("Error fetching groups:", data.error);
+    return [];
+  }
+}
+
+async function populateCalendarToggle() {
+  const userId = localStorage.getItem('nexusUserId');
+  const toggle = document.getElementById('calendar-toggle');
+  if (!toggle) return;
+
+  toggle.innerHTML = '<option value="personal">My Calendar</option>'; // Reset
+
+  try {
+    const res = await fetch(`http://localhost:3001/users/${userId}/groups`);
+    const data = await res.json();
+    if (Array.isArray(data.groups)) {
+      data.groups.forEach(group => {
+        const option = document.createElement('option');
+        option.value = group.groupId;
+        option.textContent = group.name;
+        toggle.appendChild(option);
+      });
+    }
+
+    // Always include "All Calendars"
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = 'All Calendars';
+    toggle.appendChild(allOption);
+  } catch (err) {
+    console.error("Error loading groups for toggle:", err);
+  }
+}
+
 
 });
 
